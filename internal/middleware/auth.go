@@ -19,7 +19,7 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		tokenStr := strings.Split(authHeader, " ")[1]
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (any, error) {
 			return []byte(cfg.JWTSecret), nil
 		})
