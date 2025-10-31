@@ -8,10 +8,10 @@ import (
 
 type Input struct {
 	gorm.Model
-	SeasonID uint
+	SeasonID uint `gorm:"index:idx_input_seasons"`
 	Type     string
 	Quantity float64
 	Cost     float64
-	Date     time.Time
+	Date     time.Time `gorm:"not null"`
 	Notes    string
 }

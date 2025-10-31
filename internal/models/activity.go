@@ -8,8 +8,8 @@ import (
 
 type Activity struct {
 	gorm.Model
-	SeasonID uint
+	SeasonID uint `gorm:"index:idx_season_activities"`
 	Type     string
-	Details  string
+	Details  string `gorm:"not null"`
 	Cost     float32
 }

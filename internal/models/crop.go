@@ -6,7 +6,7 @@ import (
 
 type Crop struct {
 	gorm.Model
-	UserID  uint
-	Name    string
+	UserID  uint   `gorm:"index:idx_user_crops"`
+	Name    string `gorm:"not null"`
 	Variety string
 }
