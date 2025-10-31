@@ -8,7 +8,7 @@ type User struct {
 	Email     string `gorm:"unique;not null"`
 	FirstName string `gorm:"unique;not null"`
 	LastName  string `gorm:"not null"`
-	Password  []byte
+	Password  string
 	FarmName  string
 	Location  string
 }
