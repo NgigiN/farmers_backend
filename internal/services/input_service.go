@@ -17,14 +17,14 @@ func NewCostService(db *gorm.DB) *CostService {
 	return &CostService{DB: db}
 }
 
-func (s *CostService) GetBreakdownByInputType(userID uint, seasonID uint) ([]CostBreakdown, error) {
+func (s *CostService) GetBreakdownByInputType(userID uint, seasonID uint) ([]InputCostBreakdown, error) {
 	var inputs []models.Input
 	if err := s.DB.Where("season_id = ? AND season_id IN (SELECT id FROM seasons where user_id = ?)", seasonID, userID).Find(&inputs).Error; err != nil {
 		return nil, err
 	}
 	types := []string{"Seeds", "Nursery", "Water", "Labor", "Transport", "Miscellaneous", "Fertelizer", "Salaries"}
 
-	breakdown := make([]CostBreakdown, len(types))
+	breakdown := make([]InputCostBreakdown, len(types))
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 
@@ -39,14 +39,14 @@ func (s *CostService) GetBreakdownByInputType(userID uint, seasonID uint) ([]Cos
 				}
 			}
 			mu.Lock()
-			breakdown[idx] = CostBreakdown{Type: inputType, TotalCost: totalCost}
+			breakdown[idx] = InputCostBreakdown{Type: inputType, TotalCost: totalCost}
 			mu.Unlock()
 		}(i, t)
 	}
 	return breakdown, nil
 }
 
-type CostBreakdown struct {
+type InputCostBreakdown struct {
 	Type      string
 	TotalCost float64
 }
