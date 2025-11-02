@@ -38,7 +38,7 @@ func (s *SeasonService) Update(userID, id uint, season *models.Season) error {
 	if err := middleware.ValidateStruct(season); err != nil {
 		return err
 	}
-	return s.DB.Model(&models.season{}).Where("id = ? AND user_id = ?", id, userID).Updates(activity).Error
+	return s.DB.Model(&models.Season{}).Where("id = ? AND user_id = ?", id, userID).Updates(season).Error
 }
 
 func (s *SeasonService) Delete(userID, id uint) error {
