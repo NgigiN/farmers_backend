@@ -4,11 +4,10 @@ import "gorm.io/gorm"
 
 type User struct {
 	gorm.Model
-	ID        uint   `gorm:"PrimaryKey"`
-	Email     string `gorm:"unique;not null"`
-	FirstName string `gorm:"unique;not null"`
-	LastName  string `gorm:"not null"`
-	Password  string
-	FarmName  string
-	Location  string
+	Email     string `gorm:"type:varchar(255);uniqueIndex:idx_user_email;not null"`
+	FirstName string `gorm:"type:varchar(100);not null"`
+	LastName  string `gorm:"type:varchar(100);not null"`
+	Password  string `gorm:"type:varchar(255);not null"`
+	FarmName  string `gorm:"type:varchar(255)"`
+	Location  string `gorm:"type:varchar(255)"`
 }

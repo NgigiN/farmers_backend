@@ -1,52 +1,67 @@
-// Package services provides functions necessary for business logic
 package services
 
 import (
-	"sync"
-
+	"farm-backend/internal/middleware"
 	"farm-backend/internal/models"
 
 	"gorm.io/gorm"
 )
 
-type CostService struct {
+type InputService struct {
 	DB *gorm.DB
 }
 
-func NewCostService(db *gorm.DB) *CostService {
-	return &CostService{DB: db}
+func NewInputService(db *gorm.DB) *InputService {
+	return &InputService{DB: db}
 }
 
-func (s *CostService) GetBreakdownByInputType(userID uint, seasonID uint) ([]InputCostBreakdown, error) {
+func (s *InputService) Create(UserID uint, input *models.Input) error {
+	if err := s.DB.Where("id = ? AND user_id = ?", input.SeasonID, UserID).First(&models.Season{}).Error; err != nil {
+		return err
+	}
+	if err := middleware.ValidateStruct(input); err != nil {
+		return err
+	}
+	return s.DB.Create(input).Error
+}
+
+func (s *InputService) List(UserID uint) ([]models.Input, error) {
 	var inputs []models.Input
-	if err := s.DB.Where("season_id = ? AND season_id IN (SELECT id FROM seasons where user_id = ?)", seasonID, userID).Find(&inputs).Error; err != nil {
+	err := s.DB.Table("inputs").
+		Joins("JOIN seasons ON inputs.season_id = seasons.id").
+		Where("seasons.user_id = ?", UserID).
+		Find(&inputs).Error
+	return inputs, err
+}
+
+func (s *InputService) Get(UserID uint, id uint) (*models.Input, error) {
+	var input models.Input
+	err := s.DB.Table("inputs").
+		Joins("JOIN seasons ON inputs.season_id = seasons.id").
+		Where("inputs.id = ? AND seasons.user_id = ?", id, UserID).
+		First(&input).Error
+	if err != nil {
 		return nil, err
 	}
-	types := []string{"Seeds", "Nursery", "Water", "Labor", "Transport", "Miscellaneous", "Fertelizer", "Salaries"}
-
-	breakdown := make([]InputCostBreakdown, len(types))
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-
-	for i, t := range types {
-		wg.Add(1)
-		go func(idx int, inputType string) {
-			defer wg.Done()
-			var totalCost float64
-			for _, inp := range inputs {
-				if inp.Type == inputType {
-					totalCost += inp.Cost
-				}
-			}
-			mu.Lock()
-			breakdown[idx] = InputCostBreakdown{Type: inputType, TotalCost: totalCost}
-			mu.Unlock()
-		}(i, t)
-	}
-	return breakdown, nil
+	return &input, nil
 }
 
-type InputCostBreakdown struct {
-	Type      string
-	TotalCost float64
+func (s *InputService) Update(userID, id uint, input *models.Input) error {
+	if err := s.DB.Where("id = ? AND user_id = ?", input.SeasonID, userID).First(&models.Season{}).Error; err != nil {
+		return err
+	}
+	if err := middleware.ValidateStruct(input); err != nil {
+		return err
+	}
+	return s.DB.Table("inputs").
+		Joins("JOIN seasons ON inputs.season_id = seasons.id").
+		Where("inputs.id = ? AND seasons.user_id = ?", id, userID).
+		Updates(input).Error
+}
+
+func (s *InputService) Delete(userID, id uint) error {
+	return s.DB.Table("inputs").
+		Joins("JOIN seasons ON inputs.season_id = seasons.id").
+		Where("inputs.id = ? AND seasons.user_id = ?", id, userID).
+		Delete(&models.Input{}).Error
 }

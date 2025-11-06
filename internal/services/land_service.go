@@ -28,17 +28,20 @@ func (s *LandService) List(UserID uint) ([]models.Land, error) {
 	return land, s.DB.Where("user_id = ?", UserID).Find(&land).Error
 }
 
-func (s *LandService) Get(UserID uint, id uint) (*[]models.Land, error) {
-	var land []models.Land
-	err := s.DB.Where("id = ? AND user_id = ?", id, UserID).Find(&land).Error
-	return &land, err
+func (s *LandService) Get(UserID uint, id uint) (*models.Land, error) {
+	var land models.Land
+	err := s.DB.Where("id = ? AND user_id = ?", id, UserID).First(&land).Error
+	if err != nil {
+		return nil, err
+	}
+	return &land, nil
 }
 
-func (s *LandService) Update(userID, id uint, crop *models.Land) error {
-	if err := middleware.ValidateStruct(crop); err != nil {
+func (s *LandService) Update(userID, id uint, land *models.Land) error {
+	if err := middleware.ValidateStruct(land); err != nil {
 		return err
 	}
-	return s.DB.Model(&models.Land{}).Where("id = ? AND user_id = ?", id, userID).Updates(crop).Error
+	return s.DB.Model(&models.Land{}).Where("id = ? AND user_id = ?", id, userID).Updates(land).Error
 }
 
 func (s *LandService) Delete(userID, id uint) error {

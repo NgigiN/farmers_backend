@@ -4,7 +4,17 @@ import (
 	"sync"
 
 	"farm-backend/internal/models"
+
+	"gorm.io/gorm"
 )
+
+type CostService struct {
+	DB *gorm.DB
+}
+
+func NewCostService(db *gorm.DB) *CostService {
+	return &CostService{DB: db}
+}
 
 type TotalCostBySeason struct {
 	ID         uint
@@ -20,12 +30,12 @@ func (s *CostService) TotalCostBySeason(userID uint) ([]TotalCostBySeason, error
 	var results []TotalCostBySeason
 	err := s.DB.Table("inputs i").
 		Joins("JOIN seasons s ON i.season_id = s.id").
-		Joins("JOIN lands l ON i.land_id = l.id").
-		Joins("JOIN crops c ON c.crop_id = c.id").
+		Joins("JOIN lands l ON s.land_id = l.id").
+		Joins("JOIN crops c ON s.crop_id = c.id").
 		Joins("JOIN users u ON s.user_id = u.id").
 		Where("s.user_id = ?", userID).
 		Group("s.id, s.name, s.start_date, c.name, l.name, u.farm_name").
-		Select("s.id, s.name AS seanson_name, s.start_date, c.name AS crop_name, l.name AS land_name, u.farm_name, SUM(i.cost) AS total_cost").
+		Select("s.id, s.name AS season_name, s.start_date, c.name AS crop_name, l.name AS land_name, u.farm_name, SUM(i.cost) AS total_cost").
 		Scan(&results).Error
 
 	return results, err
@@ -41,18 +51,35 @@ type CostBreakdown struct {
 }
 
 func (s *CostService) CostBreakdownByInputType(userID, seasonID uint) ([]CostBreakdown, error) {
-	var inputs []models.Input
-	err := s.DB.Preload("Season").Where("season_id = ? AND season_id IN ((Select id from seasons where user_id = ?)", seasonID, userID).Find(&inputs).Error
+	var season models.Season
+	err := s.DB.Where("id = ? AND user_id = ?", seasonID, userID).
+		Preload("Crop").
+		Preload("Land").
+		First(&season).Error
 	if err != nil {
 		return nil, err
 	}
 
-	inputTypes := []string{"Seeds", "Nursery", "water", "Labor", "Transport"}
+	var inputs []models.Input
+	err = s.DB.Where("season_id = ?", seasonID).Find(&inputs).Error
+	if err != nil {
+		return nil, err
+	}
+
+	if len(inputs) == 0 {
+		return []CostBreakdown{}, nil
+	}
+
+	inputTypes := []string{"Seeds", "Nursery", "Water", "Labor", "Transport"}
 
 	var totalCost float64
 	for _, inp := range inputs {
 		totalCost += inp.Cost
 	}
+
+	cropName := season.Crop.Name
+	landName := season.Land.Name
+
 	breakdown := make([]CostBreakdown, len(inputTypes))
 	var wg sync.WaitGroup
 	for i, t := range inputTypes {
@@ -70,9 +97,9 @@ func (s *CostService) CostBreakdownByInputType(userID, seasonID uint) ([]CostBre
 				percentage = (sum / totalCost) * 100
 			}
 			breakdown[idx] = CostBreakdown{
-				SeasonName: inputs[0].SeasonID,
-				CropName:   "",
-				LandName:   "",
+				SeasonName: seasonID,
+				CropName:   cropName,
+				LandName:   landName,
 				InputType:  typ,
 				InputCost:  sum,
 				Percentage: percentage,

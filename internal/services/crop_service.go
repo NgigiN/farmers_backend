@@ -28,10 +28,13 @@ func (s *CropService) List(UserID uint) ([]models.Crop, error) {
 	return crops, s.DB.Where("user_id = ?", UserID).Find(&crops).Error
 }
 
-func (s *CropService) Get(UserID uint, id uint) (*[]models.Crop, error) {
-	var crops []models.Crop
-	err := s.DB.Where("id = ? AND user_id = ?", id, UserID).Find(&crops).Error
-	return &crops, err
+func (s *CropService) Get(UserID uint, id uint) (*models.Crop, error) {
+	var crop models.Crop
+	err := s.DB.Where("id = ? AND user_id = ?", id, UserID).First(&crop).Error
+	if err != nil {
+		return nil, err
+	}
+	return &crop, nil
 }
 
 func (s *CropService) Update(userID, id uint, crop *models.Crop) error {

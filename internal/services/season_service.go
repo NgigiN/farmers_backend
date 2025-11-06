@@ -28,10 +28,13 @@ func (s *SeasonService) List(UserID uint) ([]models.Season, error) {
 	return seasons, s.DB.Where("user_id = ?", UserID).Find(&seasons).Error
 }
 
-func (s *SeasonService) Get(UserID uint, id uint) (*[]models.Season, error) {
-	var seasons []models.Season
-	err := s.DB.Where("id = ? AND user_id = ?", id, UserID).Find(&seasons).Error
-	return &seasons, err
+func (s *SeasonService) Get(UserID uint, id uint) (*models.Season, error) {
+	var season models.Season
+	err := s.DB.Where("id = ? AND user_id = ?", id, UserID).First(&season).Error
+	if err != nil {
+		return nil, err
+	}
+	return &season, nil
 }
 
 func (s *SeasonService) Update(userID, id uint, season *models.Season) error {

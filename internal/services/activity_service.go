@@ -28,10 +28,13 @@ func (s *ActivityService) List(UserID uint) ([]models.Activity, error) {
 	return activities, s.DB.Where("user_id = ?", UserID).Find(&activities).Error
 }
 
-func (s *ActivityService) Get(UserID uint, id uint) (*[]models.Activity, error) {
-	var activities []models.Activity
-	err := s.DB.Where("id = ? AND user_id = ?", id, UserID).Find(&activities).Error
-	return &activities, err
+func (s *ActivityService) Get(UserID uint, id uint) (*models.Activity, error) {
+	var activity models.Activity
+	err := s.DB.Where("id = ? AND user_id = ?", id, UserID).First(&activity).Error
+	if err != nil {
+		return nil, err
+	}
+	return &activity, nil
 }
 
 func (s *ActivityService) Update(userID, id uint, activity *models.Activity) error {

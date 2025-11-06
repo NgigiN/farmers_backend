@@ -35,7 +35,10 @@ func (s *AuthService) Register(user *models.User) error {
 
 func (s *AuthService) Login(email, password string) (string, error) {
 	var user models.User
-	if err := s.DB.Where("email = ? ", email).First(&user).Error; err != nil {
+	if err := s.DB.Where("email = ?", email).First(&user).Error; err != nil {
+		return "", err
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
 		return "", err
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{

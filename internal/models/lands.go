@@ -6,9 +6,10 @@ import (
 
 type Land struct {
 	gorm.Model
-	UserID   uint   `gorm:"index:idx_lands_user"`
-	Name     string `gorm:"not null"`
-	Size     float32
-	Location string
-	SoilType string
+	UserID   uint    `gorm:"type:bigint;index:idx_land_user_id;not null"`
+	User     User    `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
+	Name     string  `gorm:"type:varchar(255);not null"`
+	Size     float32 `gorm:"type:decimal(10,2)"`
+	Location string  `gorm:"type:varchar(255)"`
+	SoilType string  `gorm:"type:varchar(100)"`
 }
