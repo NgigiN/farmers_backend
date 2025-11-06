@@ -2,7 +2,7 @@ package services
 
 import (
 	"farm-backend/internal/middleware"
-	"farm-backend/internal/models"
+	plantModels "farm-backend/internal/models/plants"
 
 	"gorm.io/gorm"
 )
@@ -15,7 +15,7 @@ func NewCropService(db *gorm.DB) *CropService {
 	return &CropService{DB: db}
 }
 
-func (s *CropService) Create(UserID uint, crop *models.Crop) error {
+func (s *CropService) Create(UserID uint, crop *plantModels.Crop) error {
 	crop.UserID = UserID
 	if err := middleware.ValidateStruct(crop); err != nil {
 		return err
@@ -23,13 +23,13 @@ func (s *CropService) Create(UserID uint, crop *models.Crop) error {
 	return s.DB.Create(crop).Error
 }
 
-func (s *CropService) List(UserID uint) ([]models.Crop, error) {
-	var crops []models.Crop
+func (s *CropService) List(UserID uint) ([]plantModels.Crop, error) {
+	var crops []plantModels.Crop
 	return crops, s.DB.Where("user_id = ?", UserID).Find(&crops).Error
 }
 
-func (s *CropService) Get(UserID uint, id uint) (*models.Crop, error) {
-	var crop models.Crop
+func (s *CropService) Get(UserID uint, id uint) (*plantModels.Crop, error) {
+	var crop plantModels.Crop
 	err := s.DB.Where("id = ? AND user_id = ?", id, UserID).First(&crop).Error
 	if err != nil {
 		return nil, err
@@ -37,13 +37,13 @@ func (s *CropService) Get(UserID uint, id uint) (*models.Crop, error) {
 	return &crop, nil
 }
 
-func (s *CropService) Update(userID, id uint, crop *models.Crop) error {
+func (s *CropService) Update(userID, id uint, crop *plantModels.Crop) error {
 	if err := middleware.ValidateStruct(crop); err != nil {
 		return err
 	}
-	return s.DB.Model(&models.Crop{}).Where("id = ? AND user_id = ?", id, userID).Updates(crop).Error
+	return s.DB.Model(&plantModels.Crop{}).Where("id = ? AND user_id = ?", id, userID).Updates(crop).Error
 }
 
 func (s *CropService) Delete(userID, id uint) error {
-	return s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(models.Crop{}).Error
+	return s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(plantModels.Crop{}).Error
 }

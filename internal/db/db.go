@@ -3,7 +3,7 @@ package db
 
 import (
 	"farm-backend/internal/config"
-	"farm-backend/internal/models"
+	plantModels "farm-backend/internal/models/plants"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -14,7 +14,7 @@ func Connect(cfg *config.Config) (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = db.AutoMigrate(&models.User{}, &models.Crop{}, &models.Land{}, &models.Season{}, &models.Input{}, &models.Activity{})
+	err = db.AutoMigrate(&plantModels.User{}, &plantModels.Crop{}, &plantModels.Land{}, &plantModels.Season{}, &plantModels.Input{}, &plantModels.Activity{})
 	if err != nil {
 		return nil, err
 	}

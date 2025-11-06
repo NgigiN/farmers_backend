@@ -2,7 +2,7 @@ package services
 
 import (
 	"farm-backend/internal/middleware"
-	"farm-backend/internal/models"
+	seasonModels "farm-backend/internal/models/plants"
 
 	"gorm.io/gorm"
 )
@@ -15,7 +15,7 @@ func NewSeasonService(db *gorm.DB) *SeasonService {
 	return &SeasonService{DB: db}
 }
 
-func (s *SeasonService) Create(UserID uint, season *models.Season) error {
+func (s *SeasonService) Create(UserID uint, season *seasonModels.Season) error {
 	season.UserID = UserID
 	if err := middleware.ValidateStruct(season); err != nil {
 		return err
@@ -23,13 +23,13 @@ func (s *SeasonService) Create(UserID uint, season *models.Season) error {
 	return s.DB.Create(season).Error
 }
 
-func (s *SeasonService) List(UserID uint) ([]models.Season, error) {
-	var seasons []models.Season
+func (s *SeasonService) List(UserID uint) ([]seasonModels.Season, error) {
+	var seasons []seasonModels.Season
 	return seasons, s.DB.Where("user_id = ?", UserID).Find(&seasons).Error
 }
 
-func (s *SeasonService) Get(UserID uint, id uint) (*models.Season, error) {
-	var season models.Season
+func (s *SeasonService) Get(UserID uint, id uint) (*seasonModels.Season, error) {
+	var season seasonModels.Season
 	err := s.DB.Where("id = ? AND user_id = ?", id, UserID).First(&season).Error
 	if err != nil {
 		return nil, err
@@ -37,13 +37,13 @@ func (s *SeasonService) Get(UserID uint, id uint) (*models.Season, error) {
 	return &season, nil
 }
 
-func (s *SeasonService) Update(userID, id uint, season *models.Season) error {
+func (s *SeasonService) Update(userID, id uint, season *seasonModels.Season) error {
 	if err := middleware.ValidateStruct(season); err != nil {
 		return err
 	}
-	return s.DB.Model(&models.Season{}).Where("id = ? AND user_id = ?", id, userID).Updates(season).Error
+	return s.DB.Model(&seasonModels.Season{}).Where("id = ? AND user_id = ?", id, userID).Updates(season).Error
 }
 
 func (s *SeasonService) Delete(userID, id uint) error {
-	return s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(models.Season{}).Error
+	return s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(seasonModels.Season{}).Error
 }

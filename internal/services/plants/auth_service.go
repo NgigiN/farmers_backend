@@ -5,7 +5,7 @@ import (
 
 	"farm-backend/internal/config"
 	"farm-backend/internal/middleware"
-	"farm-backend/internal/models"
+	userModels "farm-backend/internal/models/plants"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -21,7 +21,7 @@ func NewAuthService(db *gorm.DB, cfg *config.Config) *AuthService {
 	return &AuthService{DB: db, Cfg: cfg}
 }
 
-func (s *AuthService) Register(user *models.User) error {
+func (s *AuthService) Register(user *userModels.User) error {
 	if err := middleware.ValidateStruct(user); err != nil {
 		return err
 	}
@@ -34,7 +34,7 @@ func (s *AuthService) Register(user *models.User) error {
 }
 
 func (s *AuthService) Login(email, password string) (string, error) {
-	var user models.User
+	var user userModels.User
 	if err := s.DB.Where("email = ?", email).First(&user).Error; err != nil {
 		return "", err
 	}

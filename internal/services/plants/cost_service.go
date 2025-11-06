@@ -3,7 +3,7 @@ package services
 import (
 	"sync"
 
-	"farm-backend/internal/models"
+	plantModels "farm-backend/internal/models/plants"
 
 	"gorm.io/gorm"
 )
@@ -51,7 +51,7 @@ type CostBreakdown struct {
 }
 
 func (s *CostService) CostBreakdownByInputType(userID, seasonID uint) ([]CostBreakdown, error) {
-	var season models.Season
+	var season plantModels.Season
 	err := s.DB.Where("id = ? AND user_id = ?", seasonID, userID).
 		Preload("Crop").
 		Preload("Land").
@@ -60,7 +60,7 @@ func (s *CostService) CostBreakdownByInputType(userID, seasonID uint) ([]CostBre
 		return nil, err
 	}
 
-	var inputs []models.Input
+	var inputs []plantModels.Input
 	err = s.DB.Where("season_id = ?", seasonID).Find(&inputs).Error
 	if err != nil {
 		return nil, err
