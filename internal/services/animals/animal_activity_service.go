@@ -59,8 +59,6 @@ func (s *AnimalActivityService) Update(userID, id uint, animalActivity *animalMo
 }
 
 func (s *AnimalActivityService) Delete(userID, id uint) error {
-	return s.DB.Table("animal_activities").
-		Joins("JOIN herds ON animal_activities.herd_id = herds.id").
-		Where("animal_activities.id = ? AND herds.user_id = ?", id, userID).
+	return s.DB.Where("id = ? AND user_id = ?", id, userID).
 		Delete(&animalModels.AnimalActivity{}).Error
 }
