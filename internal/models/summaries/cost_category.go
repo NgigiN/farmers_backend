@@ -1,4 +1,4 @@
-package summaries
+package models
 
 import (
 	"gorm.io/gorm"

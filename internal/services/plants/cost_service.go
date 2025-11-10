@@ -20,7 +20,7 @@ type TotalCostBySeason struct {
 	ID         uint
 	SeasonName string
 	StartDate  string
-	CropName   string
+	PlantName  string
 	LandName   string
 	FarmName   string
 	TotalCost  float64
@@ -31,11 +31,11 @@ func (s *CostService) TotalCostBySeason(userID uint) ([]TotalCostBySeason, error
 	err := s.DB.Table("inputs i").
 		Joins("JOIN seasons s ON i.season_id = s.id").
 		Joins("JOIN lands l ON s.land_id = l.id").
-		Joins("JOIN crops c ON s.crop_id = c.id").
+		Joins("JOIN plants c ON s.plant_id = c.id").
 		Joins("JOIN users u ON s.user_id = u.id").
 		Where("s.user_id = ?", userID).
 		Group("s.id, s.name, s.start_date, c.name, l.name, u.farm_name").
-		Select("s.id, s.name AS season_name, s.start_date, c.name AS crop_name, l.name AS land_name, u.farm_name, SUM(i.cost) AS total_cost").
+		Select("s.id, s.name AS season_name, s.start_date, c.name AS plant_name, l.name AS land_name, u.farm_name, SUM(i.cost) AS total_cost").
 		Scan(&results).Error
 
 	return results, err
@@ -43,7 +43,7 @@ func (s *CostService) TotalCostBySeason(userID uint) ([]TotalCostBySeason, error
 
 type CostBreakdown struct {
 	SeasonName uint
-	CropName   string
+	PlantName  string
 	LandName   string
 	InputType  string
 	InputCost  float64
@@ -53,7 +53,7 @@ type CostBreakdown struct {
 func (s *CostService) CostBreakdownByInputType(userID, seasonID uint) ([]CostBreakdown, error) {
 	var season plantModels.Season
 	err := s.DB.Where("id = ? AND user_id = ?", seasonID, userID).
-		Preload("Crop").
+		Preload("Plant").
 		Preload("Land").
 		First(&season).Error
 	if err != nil {
@@ -77,7 +77,7 @@ func (s *CostService) CostBreakdownByInputType(userID, seasonID uint) ([]CostBre
 		totalCost += inp.Cost
 	}
 
-	cropName := season.Crop.Name
+	plantName := season.Plant.Name
 	landName := season.Land.Name
 
 	breakdown := make([]CostBreakdown, len(inputTypes))
@@ -98,7 +98,7 @@ func (s *CostService) CostBreakdownByInputType(userID, seasonID uint) ([]CostBre
 			}
 			breakdown[idx] = CostBreakdown{
 				SeasonName: seasonID,
-				CropName:   cropName,
+				PlantName:  plantName,
 				LandName:   landName,
 				InputType:  typ,
 				InputCost:  sum,
@@ -112,7 +112,7 @@ func (s *CostService) CostBreakdownByInputType(userID, seasonID uint) ([]CostBre
 
 type AnnualCostSummary struct {
 	Year      string
-	CropName  string
+	PlantName string
 	LandName  string
 	FarmName  string
 	TotalCost float64
@@ -122,12 +122,12 @@ func (s *CostService) AnnualCostSummary(userID uint) ([]AnnualCostSummary, error
 	var results []AnnualCostSummary
 	err := s.DB.Table("inputs i").
 		Joins("JOIN seasons s ON i.season_id = s.id").
-		Joins("JOIN crops c ON s.crop_id = c.id").
+		Joins("JOIN plants c ON s.plant_id = c.id").
 		Joins("JOIN lands l ON s.land_id = l.id").
 		Joins("JOIN users u ON s.user_id = u.id").
 		Where("s.user_id = ?", userID).
 		Group("strftime('%Y', s.start_date), c.name, l.name, u.farm_name").
-		Select("strftime('%Y', s.start_date) AS year, c.name AS crop_name, l.name AS land_name, u.farm_name, SUM(i.cost) AS total_cost").
+		Select("strftime('%Y', s.start_date) AS year, c.name AS plant_name, l.name AS land_name, u.farm_name, SUM(i.cost) AS total_cost").
 		Scan(&results).Error
 	return results, err
 }
