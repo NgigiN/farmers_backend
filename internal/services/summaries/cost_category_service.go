@@ -16,27 +16,40 @@ func NewCostCategoryService(db *gorm.DB) *CostCategoryService {
 	return &CostCategoryService{DB: db}
 }
 
-var defaultCategories = map[string]summariesModels.CostCategory{
-	"Feed": {
-		Name:      "Feed",
-		Type:      "Animal",
-		IsDefault: true,
-	},
-	"Medication": {
-		Name:      "Medication",
-		Type:      "Animal",
-		IsDefault: true,
-	},
-	"Vaccination": {
-		Name:      "Vaccination",
-		Type:      "Animal",
-		IsDefault: true,
-	},
-	"Labor": {
-		Name:      "Labor",
-		Type:      "Animal",
-		IsDefault: true,
-	},
+var defaultAnimalInputCategories = []summariesModels.CostCategory{
+	{Name: "Feed", Type: "animal", Category: "input", IsDefault: true},
+	{Name: "Vaccination", Type: "animal", Category: "input", IsDefault: true},
+	{Name: "Medicine", Type: "animal", Category: "input", IsDefault: true},
+	{Name: "Labor", Type: "animal", Category: "input", IsDefault: true},
+	{Name: "Transport", Type: "animal", Category: "input", IsDefault: true},
+	{Name: "Miscellaneous", Type: "animal", Category: "input", IsDefault: true},
+}
+
+var defaultAnimalActivityCategories = []summariesModels.CostCategory{
+	{Name: "Milking", Type: "animal", Category: "activity", IsDefault: true},
+	{Name: "Breeding", Type: "animal", Category: "activity", IsDefault: true},
+	{Name: "Health Check", Type: "animal", Category: "activity", IsDefault: true},
+	{Name: "Grazing", Type: "animal", Category: "activity", IsDefault: true},
+	{Name: "Miscellaneous", Type: "animal", Category: "activity", IsDefault: true},
+}
+
+var defaultPlantInputCategories = []summariesModels.CostCategory{
+	{Name: "Seeds", Type: "plant", Category: "input", IsDefault: true},
+	{Name: "Nursery", Type: "plant", Category: "input", IsDefault: true},
+	{Name: "Water", Type: "plant", Category: "input", IsDefault: true},
+	{Name: "Labor", Type: "plant", Category: "input", IsDefault: true},
+	{Name: "Transport", Type: "plant", Category: "input", IsDefault: true},
+	{Name: "Fertilizer", Type: "plant", Category: "input", IsDefault: true},
+	{Name: "Miscellaneous", Type: "plant", Category: "input", IsDefault: true},
+}
+
+var defaultPlantActivityCategories = []summariesModels.CostCategory{
+	{Name: "Planting", Type: "plant", Category: "activity", IsDefault: true},
+	{Name: "Harvesting", Type: "plant", Category: "activity", IsDefault: true},
+	{Name: "Weeding", Type: "plant", Category: "activity", IsDefault: true},
+	{Name: "Irrigation", Type: "plant", Category: "activity", IsDefault: true},
+	{Name: "Pruning", Type: "plant", Category: "activity", IsDefault: true},
+	{Name: "Miscellaneous", Type: "plant", Category: "activity", IsDefault: true},
 }
 
 func (s *CostCategoryService) Create(UserID uint, costCategory *summariesModels.CostCategory) error {
@@ -48,6 +61,15 @@ func (s *CostCategoryService) Create(UserID uint, costCategory *summariesModels.
 }
 
 func (s *CostCategoryService) List(UserID uint) ([]summariesModels.CostCategory, error) {
+	var count int64
+	s.DB.Model(&summariesModels.CostCategory{}).Where("user_id = ?", UserID).Count(&count)
+
+	if count == 0 {
+		if err := s.InitializeDefaultCategories(UserID); err != nil {
+			return nil, err
+		}
+	}
+
 	var costCategories []summariesModels.CostCategory
 	return costCategories, s.DB.Where("user_id = ?", UserID).Find(&costCategories).Error
 }
@@ -78,14 +100,16 @@ func (s *CostCategoryService) GetDefaultCategories() ([]summariesModels.CostCate
 }
 
 func (s *CostCategoryService) InitializeDefaultCategories(userID uint) error {
-	defaultCategories, err := s.GetDefaultCategories()
-	if err != nil {
-		return err
-	}
-	for _, category := range defaultCategories {
+	allDefaults := append(
+		append(
+			append(defaultAnimalInputCategories, defaultAnimalActivityCategories...),
+			defaultPlantInputCategories...),
+		defaultPlantActivityCategories...)
+
+	for _, category := range allDefaults {
 		category.UserID = userID
-		err := s.Create(userID, &category)
-		if err != nil {
+		categoryCopy := category
+		if err := s.Create(userID, &categoryCopy); err != nil {
 			return err
 		}
 	}

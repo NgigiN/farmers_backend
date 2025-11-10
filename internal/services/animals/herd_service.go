@@ -17,6 +17,9 @@ func NewHerdService(db *gorm.DB) *HerdService {
 
 func (s *HerdService) Create(UserID uint, herd *animalModels.Herd) error {
 	herd.UserID = UserID
+	if err := s.DB.Where("id = ? AND user_id = ?", herd.AnimalTypeID, UserID).First(&animalModels.AnimalType{}).Error; err != nil {
+		return err
+	}
 	if err := middleware.ValidateStruct(herd); err != nil {
 		return err
 	}

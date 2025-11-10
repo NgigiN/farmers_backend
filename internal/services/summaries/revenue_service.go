@@ -1,8 +1,12 @@
 package services
 
 import (
+	"errors"
 	"farm-backend/internal/middleware"
+	animalModels "farm-backend/internal/models/animals"
+	plantModels "farm-backend/internal/models/plants"
 	summariesModels "farm-backend/internal/models/summaries"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -17,6 +21,21 @@ func NewRevenueService(db *gorm.DB) *RevenueService {
 
 func (s *RevenueService) Create(UserID uint, revenue *summariesModels.Revenue) error {
 	revenue.UserID = UserID
+	if revenue.Source != "plant" && revenue.Source != "animal" {
+		return errors.New("source must be either 'plant' or 'animal'")
+	}
+	if revenue.Source == "plant" {
+		if err := s.DB.Where("id = ? AND user_id = ?", revenue.SourceID, UserID).First(&plantModels.Season{}).Error; err != nil {
+			return err
+		}
+	} else if revenue.Source == "animal" {
+		if err := s.DB.Where("id = ? AND user_id = ?", revenue.SourceID, UserID).First(&animalModels.Herd{}).Error; err != nil {
+			return err
+		}
+	}
+	if revenue.Total == 0 && revenue.Quantity > 0 && revenue.UnitPrice > 0 {
+		revenue.Total = revenue.Quantity * revenue.UnitPrice
+	}
 	if err := middleware.ValidateStruct(revenue); err != nil {
 		return err
 	}
@@ -57,4 +76,14 @@ func (s *RevenueService) GetTotalRevenueBySource(UserID uint, source string) (fl
 	var total float64
 	err := s.DB.Table("revenues").Where("user_id = ? AND source = ?", UserID, source).Select("SUM(total) as total").Scan(&total).Error
 	return total, err
+}
+
+func (s *RevenueService) ListBySource(UserID uint, source string) ([]summariesModels.Revenue, error) {
+	var revenues []summariesModels.Revenue
+	return revenues, s.DB.Where("user_id = ? AND source = ?", UserID, source).Find(&revenues).Error
+}
+
+func (s *RevenueService) ListByDateRange(UserID uint, startDate, endDate time.Time) ([]summariesModels.Revenue, error) {
+	var revenues []summariesModels.Revenue
+	return revenues, s.DB.Where("user_id = ? AND date >= ? AND date <= ?", UserID, startDate, endDate).Find(&revenues).Error
 }

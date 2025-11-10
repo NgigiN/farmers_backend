@@ -17,7 +17,7 @@ func Connect(cfg *config.Config) (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = db.AutoMigrate(&plantModels.User{}, &plantModels.Crop{}, &plantModels.Land{}, &plantModels.Season{}, &plantModels.Input{}, &plantModels.Activity{}, &animalModels.AnimalType{}, &animalModels.Animal{}, &animalModels.Herd{}, &animalModels.Infrastructure{}, &animalModels.AnimalInput{}, &animalModels.AnimalActivity{}, &summaryModels.CostCategory{}, &summaryModels.Revenue{})
+	err = db.AutoMigrate(&plantModels.User{}, &plantModels.Crop{}, &plantModels.Land{}, &plantModels.Season{}, &plantModels.Input{}, &plantModels.Activity{}, &animalModels.AnimalType{}, &animalModels.Animal{}, &animalModels.Herd{}, &animalModels.Infrastructure{}, &summaryModels.CostCategory{}, &summaryModels.Revenue{})
 
 	if err != nil {
 		return nil, err
