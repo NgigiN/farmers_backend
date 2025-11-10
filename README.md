@@ -5,7 +5,7 @@ A RESTful API backend for farm management built with Go.
 ## Features
 
 - User authentication with JWT
-- Crop and land management
+- Plant and land management
 - Season tracking with start and end dates
 - Input tracking (seeds, fertilizer, water, labor, transport, etc.)
 - Activity logging
@@ -24,6 +24,6 @@ A RESTful API backend for farm management built with Go.
 - `internal/config` - Configuration management
 - `internal/db` - Database connection and migrations
 - `internal/middleware` - Authentication and validation middleware
-- `internal/models` - Data models (User, Crop, Land, Season, Input, Activity)
+- `internal/models` - Data models (User, Plant, Land, Season, Input, Activity)
 - `internal/services` - Business logic services
 
