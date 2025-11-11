@@ -1,8 +1,8 @@
 package plants
 
 import (
-	plants "farm-backend/internal/models/plants"
-	services "farm-backend/internal/services/plants"
+	plantModels "farm-backend/internal/models/plants"
+	plants "farm-backend/internal/services/plants"
 	"strconv"
 
 	"net/http"
@@ -12,16 +12,16 @@ import (
 )
 
 type LandHandler struct {
-	LandService *services.LandService
+	LandService *plants.LandService
 }
 
-func NewLandHandler(landService *services.LandService) *LandHandler {
+func NewLandHandler(landService *plants.LandService) *LandHandler {
 	return &LandHandler{LandService: landService}
 }
 
 func (h *LandHandler) CreateLand(c *gin.Context) {
 	UserID := c.GetUint("user_id")
-	var land plants.Land
+	var land plantModels.Land
 	if err := c.ShouldBindJSON(&land); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -71,7 +71,7 @@ func (h *LandHandler) UpdateLand(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid land ID"})
 		return
 	}
-	var land plants.Land
+	var land plantModels.Land
 	if err := c.ShouldBindJSON(&land); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

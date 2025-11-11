@@ -2,7 +2,7 @@ package activities
 
 import (
 	activities "farm-backend/internal/models/plants"
-	services "farm-backend/internal/services/plants"
+	plants "farm-backend/internal/services/plants"
 	"net/http"
 	"strconv"
 
@@ -11,10 +11,10 @@ import (
 )
 
 type ActivityHandler struct {
-	ActivityService *services.ActivityService
+	ActivityService *plants.ActivityService
 }
 
-func NewActivityHandler(activityService *services.ActivityService) *ActivityHandler {
+func NewActivityHandler(activityService *plants.ActivityService) *ActivityHandler {
 	return &ActivityHandler{ActivityService: activityService}
 }
 

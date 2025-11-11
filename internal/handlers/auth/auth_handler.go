@@ -2,7 +2,7 @@ package auth
 
 import (
 	users "farm-backend/internal/models/users"
-	services "farm-backend/internal/services/plants"
+	plants "farm-backend/internal/services/plants"
 
 	"net/http"
 
@@ -10,10 +10,10 @@ import (
 )
 
 type AuthHandler struct {
-	AuthService *services.AuthService
+	AuthService *plants.AuthService
 }
 
-func NewAuthHandler(authService *services.AuthService) *AuthHandler {
+func NewAuthHandler(authService *plants.AuthService) *AuthHandler {
 	return &AuthHandler{AuthService: authService}
 }
 

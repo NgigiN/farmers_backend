@@ -1,8 +1,8 @@
 package plants
 
 import (
-	plants "farm-backend/internal/models/plants"
-	services "farm-backend/internal/services/plants"
+	plantModels "farm-backend/internal/models/plants"
+	plants "farm-backend/internal/services/plants"
 	"strconv"
 
 	"net/http"
@@ -12,16 +12,16 @@ import (
 )
 
 type SeasonHandler struct {
-	SeasonService *services.SeasonService
+	SeasonService *plants.SeasonService
 }
 
-func NewSeasonHandler(seasonService *services.SeasonService) *SeasonHandler {
+func NewSeasonHandler(seasonService *plants.SeasonService) *SeasonHandler {
 	return &SeasonHandler{SeasonService: seasonService}
 }
 
 func (h *SeasonHandler) CreateSeason(c *gin.Context) {
 	UserID := c.GetUint("user_id")
-	var season plants.Season
+	var season plantModels.Season
 	if err := c.ShouldBindJSON(&season); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -71,7 +71,7 @@ func (h *SeasonHandler) UpdateSeason(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid season ID"})
 		return
 	}
-	var season plants.Season
+	var season plantModels.Season
 	if err := c.ShouldBindJSON(&season); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

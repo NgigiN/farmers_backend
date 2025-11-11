@@ -1,4 +1,4 @@
-package models
+package summaries
 
 import (
 	"time"

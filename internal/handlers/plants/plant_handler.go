@@ -1,8 +1,8 @@
 package plants
 
 import (
-	plants "farm-backend/internal/models/plants"
-	services "farm-backend/internal/services/plants"
+	plantModels "farm-backend/internal/models/plants"
+	plants "farm-backend/internal/services/plants"
 	"strconv"
 
 	"net/http"
@@ -12,16 +12,16 @@ import (
 )
 
 type PlantHandler struct {
-	PlantService *services.PlantService
+	PlantService *plants.PlantService
 }
 
-func NewPlantHandler(plantService *services.PlantService) *PlantHandler {
+func NewPlantHandler(plantService *plants.PlantService) *PlantHandler {
 	return &PlantHandler{PlantService: plantService}
 }
 
 func (h *PlantHandler) CreatePlant(c *gin.Context) {
 	UserID := c.GetUint("user_id")
-	var plant plants.Plant
+	var plant plantModels.Plant
 	if err := c.ShouldBindJSON(&plant); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -66,7 +66,7 @@ func (h *PlantHandler) GetPlant(c *gin.Context) {
 func (h *PlantHandler) UpdatePlant(c *gin.Context) {
 	UserID := c.GetUint("user_id")
 	id := c.Param("id")
-	var plant plants.Plant
+	var plant plantModels.Plant
 	if err := c.ShouldBindJSON(&plant); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

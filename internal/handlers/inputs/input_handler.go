@@ -2,7 +2,7 @@ package inputs
 
 import (
 	inputs "farm-backend/internal/models/plants"
-	services "farm-backend/internal/services/plants"
+	plants "farm-backend/internal/services/plants"
 	"net/http"
 	"strconv"
 
@@ -11,10 +11,10 @@ import (
 )
 
 type InputHandler struct {
-	InputService *services.InputService
+	InputService *plants.InputService
 }
 
-func NewInputHandler(inputService *services.InputService) *InputHandler {
+func NewInputHandler(inputService *plants.InputService) *InputHandler {
 	return &InputHandler{InputService: inputService}
 }
 

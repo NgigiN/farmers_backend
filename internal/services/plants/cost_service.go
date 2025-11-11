@@ -1,4 +1,4 @@
-package services
+package plants
 
 import (
 	"sync"

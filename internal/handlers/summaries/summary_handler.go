@@ -1,8 +1,8 @@
 package summaries
 
 import (
-	summaries "farm-backend/internal/models/summaries"
-	services "farm-backend/internal/services/summaries"
+	summaryModels "farm-backend/internal/models/summaries"
+	summaries "farm-backend/internal/services/summaries"
 	"net/http"
 	"strconv"
 	"time"
@@ -12,32 +12,32 @@ import (
 )
 
 type CostCategoryHandler struct {
-	CostCategoryService *services.CostCategoryService
+	CostCategoryService *summaries.CostCategoryService
 }
 
-func NewCostCategoryHandler(costCategoryService *services.CostCategoryService) *CostCategoryHandler {
+func NewCostCategoryHandler(costCategoryService *summaries.CostCategoryService) *CostCategoryHandler {
 	return &CostCategoryHandler{CostCategoryService: costCategoryService}
 }
 
 type RevenueHandler struct {
-	RevenueService *services.RevenueService
+	RevenueService *summaries.RevenueService
 }
 
-func NewRevenueHandler(revenueService *services.RevenueService) *RevenueHandler {
+func NewRevenueHandler(revenueService *summaries.RevenueService) *RevenueHandler {
 	return &RevenueHandler{RevenueService: revenueService}
 }
 
 type AnalysisHandler struct {
-	AnalysisService *services.AnalysisService
+	AnalysisService *summaries.AnalysisService
 }
 
-func NewAnalysisHandler(analysisService *services.AnalysisService) *AnalysisHandler {
+func NewAnalysisHandler(analysisService *summaries.AnalysisService) *AnalysisHandler {
 	return &AnalysisHandler{AnalysisService: analysisService}
 }
 
 func (h *CostCategoryHandler) CreateCostCategory(c *gin.Context) {
 	UserID := c.GetUint("user_id")
-	var costCategory summaries.CostCategory
+	var costCategory summaryModels.CostCategory
 	if err := c.ShouldBindJSON(&costCategory); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -60,7 +60,7 @@ func (h *CostCategoryHandler) ListCostCategories(c *gin.Context) {
 	typeFilter := c.Query("type")
 	categoryFilter := c.Query("category")
 
-	var filtered []summaries.CostCategory
+	var filtered []summaryModels.CostCategory
 	for _, cat := range costCategories {
 		if typeFilter != "" && cat.Type != typeFilter {
 			continue
@@ -102,7 +102,7 @@ func (h *CostCategoryHandler) UpdateCostCategory(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid cost category ID"})
 		return
 	}
-	var costCategory summaries.CostCategory
+	var costCategory summaryModels.CostCategory
 	if err := c.ShouldBindJSON(&costCategory); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -140,7 +140,7 @@ func (h *CostCategoryHandler) DeleteCostCategory(c *gin.Context) {
 
 func (h *RevenueHandler) CreateRevenue(c *gin.Context) {
 	UserID := c.GetUint("user_id")
-	var revenue summaries.Revenue
+	var revenue summaryModels.Revenue
 	if err := c.ShouldBindJSON(&revenue); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -159,7 +159,7 @@ func (h *RevenueHandler) ListRevenues(c *gin.Context) {
 	startDateStr := c.Query("start_date")
 	endDateStr := c.Query("end_date")
 
-	var revenues []summaries.Revenue
+	var revenues []summaryModels.Revenue
 	var err error
 
 	if startDateStr != "" && endDateStr != "" {
@@ -211,7 +211,7 @@ func (h *RevenueHandler) UpdateRevenue(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid revenue ID"})
 		return
 	}
-	var revenue summaries.Revenue
+	var revenue summaryModels.Revenue
 	if err := c.ShouldBindJSON(&revenue); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
