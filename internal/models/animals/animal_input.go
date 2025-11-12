@@ -8,12 +8,12 @@ import (
 
 type AnimalInput struct {
 	gorm.Model
-	UserID   uint   `gorm:"index"`
-	HerdID   uint   `gorm:"index"`
-	AnimalID uint   `gorm:"index"`
-	Type     string `gorm:"not null"` // Food, vaccination, Labor
-	Quantity float64
-	Cost     float64   `gorm:"not null"`
-	Date     time.Time `gorm:"not null"`
-	Notes    string
+	UserID   uint      `gorm:"index" json:"user_id"`
+	HerdID   uint      `gorm:"index" json:"herd_id"`
+	AnimalID uint      `gorm:"index" json:"animal_id"`
+	Type     string    `gorm:"not null" json:"type"` // Food, vaccination, Labor
+	Quantity float64   `gorm:"not null" json:"quantity"`
+	Cost     float64   `gorm:"not null" json:"cost"`
+	Date     time.Time `gorm:"not null" json:"date"`
+	Notes    string    `gorm:"not null" json:"notes"`
 }
