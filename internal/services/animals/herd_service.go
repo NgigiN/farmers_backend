@@ -48,5 +48,5 @@ func (s *HerdService) Update(userID, id uint, herd *animalModels.Herd) error {
 }
 
 func (s *HerdService) Delete(userID, id uint) error {
-	return s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(animalModels.Herd{}).Error
+	return s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(&animalModels.Herd{}).Error
 }

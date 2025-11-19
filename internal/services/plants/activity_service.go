@@ -97,5 +97,5 @@ func (s *ActivityService) Update(userID, id uint, activity *activityModels.Activ
 }
 
 func (s *ActivityService) Delete(userID, id uint) error {
-	return s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(activityModels.Activity{}).Error
+	return s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(&activityModels.Activity{}).Error
 }

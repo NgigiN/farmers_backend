@@ -91,7 +91,7 @@ func (s *CostCategoryService) Update(userID, id uint, costCategory *summariesMod
 }
 
 func (s *CostCategoryService) Delete(userID, id uint) error {
-	return s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(summariesModels.CostCategory{}).Error
+	return s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(&summariesModels.CostCategory{}).Error
 }
 
 func (s *CostCategoryService) GetDefaultCategories() ([]summariesModels.CostCategory, error) {

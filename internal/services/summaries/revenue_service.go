@@ -63,7 +63,7 @@ func (s *RevenueService) Update(userID, id uint, revenue *summariesModels.Revenu
 }
 
 func (s *RevenueService) Delete(userID, id uint) error {
-	return s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(summariesModels.Revenue{}).Error
+	return s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(&summariesModels.Revenue{}).Error
 }
 
 func (s *RevenueService) GetTotalRevenue(UserID uint) (float64, error) {

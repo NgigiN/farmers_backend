@@ -45,5 +45,5 @@ func (s *AnimalTypeService) Update(userID, id uint, animalType *animalModels.Ani
 }
 
 func (s *AnimalTypeService) Delete(userID, id uint) error {
-	return s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(animalModels.AnimalType{}).Error
+	return s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(&animalModels.AnimalType{}).Error
 }

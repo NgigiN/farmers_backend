@@ -45,5 +45,5 @@ func (s *LandService) Update(userID, id uint, land *plantModels.Land) error {
 }
 
 func (s *LandService) Delete(userID, id uint) error {
-	return s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(plantModels.Land{}).Error
+	return s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(&plantModels.Land{}).Error
 }

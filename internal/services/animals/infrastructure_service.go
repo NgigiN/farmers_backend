@@ -47,5 +47,5 @@ func (s *InfrastructureService) Update(userID, id uint, infrastructure *animalMo
 }
 
 func (s *InfrastructureService) Delete(userID, id uint) error {
-	return s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(animalModels.Infrastructure{}).Error
+	return s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(&animalModels.Infrastructure{}).Error
 }

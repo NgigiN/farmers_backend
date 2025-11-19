@@ -45,5 +45,5 @@ func (s *SeasonService) Update(userID, id uint, season *seasonModels.Season) err
 }
 
 func (s *SeasonService) Delete(userID, id uint) error {
-	return s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(seasonModels.Season{}).Error
+	return s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(&seasonModels.Season{}).Error
 }
