@@ -10,7 +10,7 @@ import (
 type Activity struct {
 	gorm.Model
 	UserID     uint       `gorm:"type:bigint;index:idx_activity_user_id;not null" json:"user_id"`
-	User       users.User `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
+	User       users.User `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"-"`
 	SourceType string     `gorm:"type:varchar(20);not null;index:idx_activity_source_type" json:"source_type"` // "plant" or "animal"
 	SourceID   uint       `gorm:"type:bigint;index:idx_activity_source_id;not null" json:"source_id"`          // SeasonID if plant, HerdID if animal
 	AnimalID   uint       `gorm:"type:bigint;index:idx_activity_animal_id" json:"animal_id"`

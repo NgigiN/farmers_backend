@@ -22,6 +22,8 @@ import (
 func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	router := gin.Default()
 
+	router.Use(middleware.LoggingMiddleware())
+
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -50,6 +52,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 
 	// Summary Services
 	costCategoryService := summaryServices.NewCostCategoryService(db)
+	costService := summaryServices.NewCostService(db)
 	revenueService := summaryServices.NewRevenueService(db)
 	analysisService := summaryServices.NewAnalysisService(db)
 
@@ -76,6 +79,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 
 	// Summary Handlers
 	costCategoryHandler := summaryHandlers.NewCostCategoryHandler(costCategoryService)
+	costHandler := summaryHandlers.NewCostHandler(costService)
 	revenueHandler := summaryHandlers.NewRevenueHandler(revenueService)
 	analysisHandler := summaryHandlers.NewAnalysisHandler(analysisService)
 
@@ -197,6 +201,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		analysis := protected.Group("/analysis")
 		{
 			analysis.GET("/total-costs", analysisHandler.GetTotalCosts)
+			analysis.GET("/total-costs-by-season", costHandler.GetTotalCostsBySeason)
 			analysis.GET("/total-revenue", analysisHandler.GetTotalRevenue)
 			analysis.GET("/profit", analysisHandler.GetProfit)
 			analysis.GET("/cost-breakdown", analysisHandler.GetCostBreakdown)

@@ -10,7 +10,7 @@ import (
 type Season struct {
 	gorm.Model
 	UserID    uint       `gorm:"type:bigint;index:idx_season_user_id;not null" json:"user_id"`
-	User      users.User `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
+	User      users.User `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"-"`
 	Name      string     `gorm:"type:varchar(255);not null" json:"name"`
 	PlantID   uint       `gorm:"type:bigint;index:idx_season_plant_id;not null" json:"plant_id"`
 	Plant     Plant      `gorm:"foreignKey:PlantID;constraint:OnDelete:RESTRICT"`

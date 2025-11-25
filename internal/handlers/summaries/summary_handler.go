@@ -19,6 +19,14 @@ func NewCostCategoryHandler(costCategoryService *summaries.CostCategoryService) 
 	return &CostCategoryHandler{CostCategoryService: costCategoryService}
 }
 
+type CostHandler struct {
+	CostService *summaries.CostService
+}
+
+func NewCostHandler(costService *summaries.CostService) *CostHandler {
+	return &CostHandler{CostService: costService}
+}
+
 type RevenueHandler struct {
 	RevenueService *summaries.RevenueService
 }
@@ -136,6 +144,16 @@ func (h *CostCategoryHandler) DeleteCostCategory(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Cost category deleted successfully"})
+}
+
+func (h *CostHandler) GetTotalCostsBySeason(c *gin.Context) {
+	UserID := c.GetUint("user_id")
+	results, err := h.CostService.TotalCostBySeason(UserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, results)
 }
 
 func (h *RevenueHandler) CreateRevenue(c *gin.Context) {
