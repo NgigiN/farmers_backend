@@ -54,6 +54,11 @@ jobs:
             cd ${{ secrets.PROJECT_PATH }}
             git pull origin main
             docker compose down || true
+            if [ -d farmers.db ]; then
+              echo "Removing farmers.db directory (should be a file)"
+              rm -rf farmers.db
+            fi
+            mkdir -p data
             docker compose build --no-cache
             docker compose up -d
       - name: Health Check

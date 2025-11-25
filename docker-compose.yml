@@ -6,8 +6,8 @@ services:
     ports:
       - "6060:6060"
     volumes:
-      - ./farmers.db:/app/farmers.db
+      - ./data:/app/data
       - ./.env:/app/.env
     environment:
       - PORT=6060
-      - DB_PATH=/app/farmers.db
+      - DB_PATH=/app/data/farmers.db
