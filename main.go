@@ -29,7 +29,7 @@ func main() {
 
 	port := cfg.Port
 	if port == "" {
-		port = "8080"
+		port = "6060"
 	}
 	// set up gin server
 	server := &http.Server{

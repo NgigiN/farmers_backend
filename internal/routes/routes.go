@@ -12,6 +12,7 @@ import (
 	animalServices "farm-backend/internal/services/animals"
 	plantServices "farm-backend/internal/services/plants"
 	summaryServices "farm-backend/internal/services/summaries"
+	"net/http"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -91,6 +92,11 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 			auth.POST("/login", authHandler.Login)
 		}
 	}
+
+	// health check
+	api.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "OK"})
+	})
 
 	protected := api.Group("")
 	protected.Use(authMiddleware)

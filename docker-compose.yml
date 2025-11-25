@@ -1,0 +1,13 @@
+services:
+  farmers_backend:
+    build: .
+    container_name: farmers_backend
+    restart: unless-stopped
+    ports:
+      - "6060:6060"
+    volumes:
+      - ./farmers.db:/app/farmers.db
+      - ./.env:/app/.env
+    environment:
+      - PORT=6060
+      - DB_PATH=/app/farmers.db
