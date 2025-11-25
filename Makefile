@@ -43,12 +43,12 @@ vet:
 all: fmt vet build
 
 docker-build:
-	docker-compose build
+	docker compose build
 
 docker-up:
-	docker-compose up -d
+	docker compose up -d
 
 docker-down:
-	docker-compose down
+	docker compose down
 
 docker-restart: docker-down docker-up
