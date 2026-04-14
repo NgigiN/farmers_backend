@@ -34,24 +34,13 @@ func (h *ActivityHandler) CreateActivity(c *gin.Context) {
 
 func (h *ActivityHandler) ListActivities(c *gin.Context) {
 	UserID := c.GetUint("user_id")
-	activityList, err := h.ActivityService.List(UserID)
+	// filtering is done at the SQL level in the service
+	sourceType := c.Query("source_type")
+	activityList, err := h.ActivityService.List(UserID, sourceType)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
-	sourceType := c.Query("source_type")
-	if sourceType != "" {
-		var filtered []activities.Activity
-		for _, act := range activityList {
-			if act.SourceType == sourceType {
-				filtered = append(filtered, act)
-			}
-		}
-		c.JSON(http.StatusOK, filtered)
-		return
-	}
-
 	c.JSON(http.StatusOK, activityList)
 }
 
@@ -96,7 +85,11 @@ func (h *ActivityHandler) UpdateActivity(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	updated, _ := h.ActivityService.Get(UserID, uint(idUint))
+	updated, err := h.ActivityService.Get(UserID, uint(idUint))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "activity updated but could not be retrieved"})
+		return
+	}
 	c.JSON(http.StatusOK, updated)
 }
 
