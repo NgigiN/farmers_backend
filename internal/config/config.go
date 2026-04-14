@@ -3,9 +3,10 @@ package config
 import "github.com/spf13/viper"
 
 type Config struct {
-	DBPath    string
-	JWTSecret string
-	Port      string
+	DBPath         string
+	JWTSecret      string
+	Port           string
+	AllowedOrigins string
 }
 
 func Load() (*Config, error) {
@@ -15,8 +16,9 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	return &Config{
-		DBPath:    viper.GetString("DB_PATH"),
-		JWTSecret: viper.GetString("JWT_SECRET"),
-		Port:      viper.GetString("PORT"),
+		DBPath:         viper.GetString("DB_PATH"),
+		JWTSecret:      viper.GetString("JWT_SECRET"),
+		Port:           viper.GetString("PORT"),
+		AllowedOrigins: viper.GetString("ALLOWED_ORIGINS"),
 	}, nil
 }
