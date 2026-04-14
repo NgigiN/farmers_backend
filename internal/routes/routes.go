@@ -1,6 +1,10 @@
 package routes
 
 import (
+	"net/http"
+	"strings"
+	"time"
+
 	"farm-backend/internal/config"
 	activityHandlers "farm-backend/internal/handlers/activities"
 	animalHandlers "farm-backend/internal/handlers/animals"
@@ -10,10 +14,9 @@ import (
 	summaryHandlers "farm-backend/internal/handlers/summaries"
 	"farm-backend/internal/middleware"
 	animalServices "farm-backend/internal/services/animals"
+	authService "farm-backend/internal/services/auth"
 	plantServices "farm-backend/internal/services/plants"
 	summaryServices "farm-backend/internal/services/summaries"
-	"net/http"
-	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -23,10 +26,17 @@ import (
 func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	router := gin.Default()
 
+	router.Use(middleware.SecurityHeaders())
 	router.Use(middleware.LoggingMiddleware())
 
+	// Build CORS allowed-origins from config.
+	// Set ALLOWED_ORIGINS in .env, e.g.: ALLOWED_ORIGINS=http://localhost:3000,https://app.mysite.com
+	allowedOrigins := []string{"http://localhost:3000"} // safe default
+	if cfg.AllowedOrigins != "" {
+		allowedOrigins = strings.Split(cfg.AllowedOrigins, ",")
+	}
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"},
+		AllowOrigins:     allowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -34,74 +44,75 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Initialize Auth Middleware
+	// Auth Middleware
 	authMiddleware := middleware.AuthMiddleware(cfg)
+	// Rate limiter: max 10 requests per minute per IP on auth endpoints
+	authRateLimiter := middleware.AuthRateLimiter(10, time.Minute)
 
-	// Plant Services
+	// ── Services ────────────────────────────────────────────────────────────
+	// Auth
+	svcAuth := authService.NewService(db, cfg)
+
+	// Plant
 	plantService := plantServices.NewPlantService(db)
 	landService := plantServices.NewLandService(db)
 	seasonService := plantServices.NewSeasonService(db)
-
 	activityService := plantServices.NewActivityService(db)
 	inputService := plantServices.NewInputService(db)
 
-	// Animal Services
+	// Animal
 	animalTypeService := animalServices.NewAnimalTypeService(db)
 	herdService := animalServices.NewHerdService(db)
 	animalService := animalServices.NewAnimalService(db)
 	infrastructureService := animalServices.NewInfrastructureService(db)
 
-	// Summary Services
+	// Summary
 	costCategoryService := summaryServices.NewCostCategoryService(db)
 	costService := summaryServices.NewCostService(db)
 	revenueService := summaryServices.NewRevenueService(db)
 	analysisService := summaryServices.NewAnalysisService(db)
 
-	// Auth Service
-	authService := plantServices.NewAuthService(db, cfg)
+	// ── Handlers ────────────────────────────────────────────────────────────
+	authHandler := authHandlers.NewAuthHandler(svcAuth)
 
-	// Auth Handler
-	authHandler := authHandlers.NewAuthHandler(authService)
-
-	// Plant Handlers
 	plantHandler := plantHandlers.NewPlantHandler(plantService)
 	landHandler := plantHandlers.NewLandHandler(landService)
 	seasonHandler := plantHandlers.NewSeasonHandler(seasonService)
 
-	// Unified Handlers
 	activityHandler := activityHandlers.NewActivityHandler(activityService)
 	inputHandler := inputHandlers.NewInputHandler(inputService)
 
-	// Animal Handlers
 	animalTypeHandler := animalHandlers.NewAnimalTypeHandler(animalTypeService)
 	herdHandler := animalHandlers.NewHerdHandler(herdService)
 	animalHandler := animalHandlers.NewAnimalHandler(animalService)
 	infrastructureHandler := animalHandlers.NewInfrastructureHandler(infrastructureService)
 
-	// Summary Handlers
 	costCategoryHandler := summaryHandlers.NewCostCategoryHandler(costCategoryService)
 	costHandler := summaryHandlers.NewCostHandler(costService)
 	revenueHandler := summaryHandlers.NewRevenueHandler(revenueService)
 	analysisHandler := summaryHandlers.NewAnalysisHandler(analysisService)
 
-	api := router.Group("/api")
-	{
-		auth := api.Group("/auth")
-		{
-			auth.POST("/register", authHandler.Register)
-			auth.POST("/login", authHandler.Login)
-		}
-	}
+	// ── Routes ──────────────────────────────────────────────────────────────
+	api := router.Group("/api/v1")
 
-	// health check
+	// Health check (public)
 	api.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "OK"})
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
+	// Auth (public + rate-limited)
+	auth := api.Group("/auth")
+	auth.Use(authRateLimiter)
+	{
+		auth.POST("/register", authHandler.Register)
+		auth.POST("/login", authHandler.Login)
+	}
+
+	// Protected routes
 	protected := api.Group("")
 	protected.Use(authMiddleware)
 	{
-		// Plant Routes
+		// ── Plants ──
 		plants := protected.Group("/plants")
 		{
 			plants.POST("", plantHandler.CreatePlant)
@@ -129,7 +140,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 			seasons.DELETE("/:id", seasonHandler.DeleteSeason)
 		}
 
-		// Animal Routes
+		// ── Animals ──
 		animalTypes := protected.Group("/animal-types")
 		{
 			animalTypes.POST("", animalTypeHandler.CreateAnimalType)
@@ -166,45 +177,51 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 			infrastructure.DELETE("/:id", infrastructureHandler.DeleteInfrastructure)
 		}
 
-		// Unified Routes (Plant & Animal)
+		// ── Shared (plant & animal) ──
+		// ?source_type=plant|animal
 		activities := protected.Group("/activities")
 		{
 			activities.POST("", activityHandler.CreateActivity)
-			activities.GET("", activityHandler.ListActivities) // plant|animal
+			activities.GET("", activityHandler.ListActivities)
 			activities.GET("/:id", activityHandler.GetActivity)
 			activities.PUT("/:id", activityHandler.UpdateActivity)
 			activities.DELETE("/:id", activityHandler.DeleteActivity)
 		}
 
+		// ?source_type=plant|animal
 		inputs := protected.Group("/inputs")
 		{
 			inputs.POST("", inputHandler.CreateInput)
-			inputs.GET("", inputHandler.ListInputs) // plant|animal
+			inputs.GET("", inputHandler.ListInputs)
 			inputs.GET("/:id", inputHandler.GetInput)
 			inputs.PUT("/:id", inputHandler.UpdateInput)
 			inputs.DELETE("/:id", inputHandler.DeleteInput)
 		}
 
-		// Summary Routes
+		// ── Costs ──
+		// ?type=plant|animal&category=input|activity
 		costCategories := protected.Group("/cost-categories")
 		{
 			costCategories.POST("", costCategoryHandler.CreateCostCategory)
-			costCategories.GET("", costCategoryHandler.ListCostCategories) // type=plant|animal&category=input|activity
+			costCategories.GET("", costCategoryHandler.ListCostCategories)
 			costCategories.GET("/:id", costCategoryHandler.GetCostCategory)
 			costCategories.PUT("/:id", costCategoryHandler.UpdateCostCategory)
 			costCategories.DELETE("/:id", costCategoryHandler.DeleteCostCategory)
 		}
 
+		// ── Revenue ──
+		// ?source=plant|animal  or  ?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD
 		revenue := protected.Group("/revenue")
 		{
 			revenue.POST("", revenueHandler.CreateRevenue)
-			revenue.GET("", revenueHandler.ListRevenues) // source=plant|animal&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD
+			revenue.GET("", revenueHandler.ListRevenues)
 			revenue.GET("/:id", revenueHandler.GetRevenue)
 			revenue.PUT("/:id", revenueHandler.UpdateRevenue)
 			revenue.DELETE("/:id", revenueHandler.DeleteRevenue)
 		}
 
-		analysis := protected.Group("/analysis")
+		// ── Analytics ──
+		analysis := protected.Group("/analytics")
 		{
 			analysis.GET("/total-costs", analysisHandler.GetTotalCosts)
 			analysis.GET("/total-costs-by-season", costHandler.GetTotalCostsBySeason)
@@ -212,7 +229,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 			analysis.GET("/profit", analysisHandler.GetProfit)
 			analysis.GET("/cost-breakdown", analysisHandler.GetCostBreakdown)
 			analysis.GET("/revenue-breakdown", analysisHandler.GetRevenueBreakdown)
-			analysis.GET("/monthly-summary", analysisHandler.GetMonthlySummary) // year=YYYY
+			analysis.GET("/monthly-summary", analysisHandler.GetMonthlySummary) // ?year=YYYY
 		}
 	}
 

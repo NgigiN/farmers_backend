@@ -2,6 +2,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -20,7 +21,12 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+
+		// Validate signing algorithm to prevent alg:none exploit
 		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (any, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
 			return []byte(cfg.JWTSecret), nil
 		})
 		if err != nil || !token.Valid {
@@ -28,8 +34,17 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+
+		// JWT MapClaims stores numeric values as float64 — cast explicitly to uint
+		// so that user_id is never silently 0 (which would expose all users' data)
 		claims := token.Claims.(jwt.MapClaims)
-		c.Set("user_id", claims["user_id"])
+		userIDFloat, ok := claims["user_id"].(float64)
+		if !ok || userIDFloat <= 0 {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+			c.Abort()
+			return
+		}
+		c.Set("user_id", uint(userIDFloat))
 		c.Next()
 	}
 }

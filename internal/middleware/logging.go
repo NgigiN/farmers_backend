@@ -14,21 +14,19 @@ func LoggingMiddleware() gin.HandlerFunc {
 		clientIP := c.ClientIP()
 		method := c.Request.Method
 		path := c.Request.URL.Path
-		contentLength := c.Request.ContentLength
 
 		c.Next()
 
 		duration := time.Since(start)
 		statusCode := c.Writer.Status()
 
-		log.Printf("[%s] %s %s | Status: %d | Duration: %v | IP: %s | Request Size: %d bytes",
+		log.Printf("[%s] %s %s | Status: %d | Duration: %v | IP: %s",
 			method,
 			path,
 			c.Request.Proto,
 			statusCode,
 			duration,
 			clientIP,
-			contentLength,
 		)
 	}
 }

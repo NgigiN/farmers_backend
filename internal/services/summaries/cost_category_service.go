@@ -74,6 +74,29 @@ func (s *CostCategoryService) List(UserID uint) ([]summariesModels.CostCategory,
 	return costCategories, s.DB.Where("user_id = ?", UserID).Find(&costCategories).Error
 }
 
+// ListFiltered returns cost categories filtered at the SQL level.
+// typeFilter: "plant" | "animal" | ""  (empty = all)
+// categoryFilter: "input" | "activity" | ""  (empty = all)
+func (s *CostCategoryService) ListFiltered(userID uint, typeFilter, categoryFilter string) ([]summariesModels.CostCategory, error) {
+	var count int64
+	s.DB.Model(&summariesModels.CostCategory{}).Where("user_id = ?", userID).Count(&count)
+	if count == 0 {
+		if err := s.InitializeDefaultCategories(userID); err != nil {
+			return nil, err
+		}
+	}
+
+	q := s.DB.Where("user_id = ?", userID)
+	if typeFilter != "" {
+		q = q.Where("type = ?", typeFilter)
+	}
+	if categoryFilter != "" {
+		q = q.Where("category = ?", categoryFilter)
+	}
+	var costCategories []summariesModels.CostCategory
+	return costCategories, q.Find(&costCategories).Error
+}
+
 func (s *CostCategoryService) Get(UserID uint, id uint) (*summariesModels.CostCategory, error) {
 	var costCategory summariesModels.CostCategory
 	err := s.DB.Where("id = ? AND user_id = ?", id, UserID).First(&costCategory).Error

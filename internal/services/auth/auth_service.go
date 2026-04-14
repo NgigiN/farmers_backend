@@ -1,4 +1,5 @@
-package plants
+// Package auth provides authentication logic: user registration and JWT-based login.
+package auth
 
 import (
 	"time"
@@ -12,16 +13,16 @@ import (
 	"gorm.io/gorm"
 )
 
-type AuthService struct {
+type Service struct {
 	DB  *gorm.DB
 	Cfg *config.Config
 }
 
-func NewAuthService(db *gorm.DB, cfg *config.Config) *AuthService {
-	return &AuthService{DB: db, Cfg: cfg}
+func NewService(db *gorm.DB, cfg *config.Config) *Service {
+	return &Service{DB: db, Cfg: cfg}
 }
 
-func (s *AuthService) Register(user *users.User) error {
+func (s *Service) Register(user *users.User) error {
 	if err := middleware.ValidateStruct(user); err != nil {
 		return err
 	}
@@ -33,7 +34,7 @@ func (s *AuthService) Register(user *users.User) error {
 	return s.DB.Create(user).Error
 }
 
-func (s *AuthService) Login(email, password string) (string, error) {
+func (s *Service) Login(email, password string) (string, error) {
 	var user users.User
 	if err := s.DB.Where("email = ?", email).First(&user).Error; err != nil {
 		return "", err

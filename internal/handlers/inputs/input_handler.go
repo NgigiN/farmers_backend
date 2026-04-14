@@ -34,24 +34,13 @@ func (h *InputHandler) CreateInput(c *gin.Context) {
 
 func (h *InputHandler) ListInputs(c *gin.Context) {
 	UserID := c.GetUint("user_id")
-	inputList, err := h.InputService.List(UserID)
+	// filtering is done at the SQL level in the service
+	sourceType := c.Query("source_type")
+	inputList, err := h.InputService.List(UserID, sourceType)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
-	sourceType := c.Query("source_type")
-	if sourceType != "" {
-		var filtered []inputs.Input
-		for _, inp := range inputList {
-			if inp.SourceType == sourceType {
-				filtered = append(filtered, inp)
-			}
-		}
-		c.JSON(http.StatusOK, filtered)
-		return
-	}
-
 	c.JSON(http.StatusOK, inputList)
 }
 
@@ -96,7 +85,11 @@ func (h *InputHandler) UpdateInput(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	updated, _ := h.InputService.Get(UserID, uint(idUint))
+	updated, err := h.InputService.Get(UserID, uint(idUint))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "input updated but could not be retrieved"})
+		return
+	}
 	c.JSON(http.StatusOK, updated)
 }
 

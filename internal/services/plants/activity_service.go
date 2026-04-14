@@ -18,54 +18,7 @@ func NewActivityService(db *gorm.DB) *ActivityService {
 	return &ActivityService{DB: db}
 }
 
-func (s *ActivityService) Create(UserID uint, activity *activityModels.Activity) error {
-	activity.UserID = UserID
-
-	if activity.SourceType != "plant" && activity.SourceType != "animal" {
-		return errors.New("source_type must be either 'plant' or 'animal'")
-	}
-
-	if activity.SourceType == "plant" {
-		if err := s.DB.Where("id = ? AND user_id = ?", activity.SourceID, UserID).First(&activityModels.Season{}).Error; err != nil {
-			return errors.New("season not found or does not belong to user")
-		}
-	} else if activity.SourceType == "animal" {
-		if err := s.DB.Where("id = ? AND user_id = ?", activity.SourceID, UserID).First(&animalModels.Herd{}).Error; err != nil {
-			return errors.New("herd not found or does not belong to user")
-		}
-		if activity.AnimalID != 0 {
-			if err := s.DB.Where("id = ? AND user_id = ?", activity.AnimalID, UserID).First(&animalModels.Animal{}).Error; err != nil {
-				return errors.New("animal not found or does not belong to user")
-			}
-		}
-	}
-
-	var category summaryModels.CostCategory
-	if err := s.DB.Where("user_id = ? AND name = ? AND type = ? AND category = ?", UserID, activity.Type, activity.SourceType, "activity").First(&category).Error; err != nil {
-		return errors.New("activity type does not exist in cost categories. Please create it first")
-	}
-
-	if err := middleware.ValidateStruct(activity); err != nil {
-		return err
-	}
-	return s.DB.Create(activity).Error
-}
-
-func (s *ActivityService) List(UserID uint) ([]activityModels.Activity, error) {
-	var activities []activityModels.Activity
-	return activities, s.DB.Where("user_id = ?", UserID).Find(&activities).Error
-}
-
-func (s *ActivityService) Get(UserID uint, id uint) (*activityModels.Activity, error) {
-	var activity activityModels.Activity
-	err := s.DB.Where("id = ? AND user_id = ?", id, UserID).First(&activity).Error
-	if err != nil {
-		return nil, err
-	}
-	return &activity, nil
-}
-
-func (s *ActivityService) Update(userID, id uint, activity *activityModels.Activity) error {
+func (s *ActivityService) validateActivity(userID uint, activity *activityModels.Activity) error {
 	if activity.SourceType != "plant" && activity.SourceType != "animal" {
 		return errors.New("source_type must be either 'plant' or 'animal'")
 	}
@@ -74,7 +27,7 @@ func (s *ActivityService) Update(userID, id uint, activity *activityModels.Activ
 		if err := s.DB.Where("id = ? AND user_id = ?", activity.SourceID, userID).First(&activityModels.Season{}).Error; err != nil {
 			return errors.New("season not found or does not belong to user")
 		}
-	} else if activity.SourceType == "animal" {
+	} else {
 		if err := s.DB.Where("id = ? AND user_id = ?", activity.SourceID, userID).First(&animalModels.Herd{}).Error; err != nil {
 			return errors.New("herd not found or does not belong to user")
 		}
@@ -86,11 +39,43 @@ func (s *ActivityService) Update(userID, id uint, activity *activityModels.Activ
 	}
 
 	var category summaryModels.CostCategory
-	if err := s.DB.Where("user_id = ? AND name = ? AND type = ? AND category = ?", userID, activity.Type, activity.SourceType, "activity").First(&category).Error; err != nil {
-		return errors.New("activity type does not exist in cost categories. Please create it first")
+	if err := s.DB.Where("user_id = ? AND name = ? AND type = ? AND category = ?",
+		userID, activity.Type, activity.SourceType, "activity").First(&category).Error; err != nil {
+		return errors.New("activity type does not exist in cost categories — please create it first")
 	}
 
-	if err := middleware.ValidateStruct(activity); err != nil {
+	return middleware.ValidateStruct(activity)
+}
+
+func (s *ActivityService) Create(userID uint, activity *activityModels.Activity) error {
+	activity.UserID = userID
+	if err := s.validateActivity(userID, activity); err != nil {
+		return err
+	}
+	return s.DB.Create(activity).Error
+}
+
+// List returns all activities for a user, optionally filtered by source_type at the DB level.
+func (s *ActivityService) List(userID uint, sourceType string) ([]activityModels.Activity, error) {
+	var activities []activityModels.Activity
+	q := s.DB.Where("user_id = ?", userID)
+	if sourceType != "" {
+		q = q.Where("source_type = ?", sourceType)
+	}
+	return activities, q.Find(&activities).Error
+}
+
+func (s *ActivityService) Get(userID uint, id uint) (*activityModels.Activity, error) {
+	var activity activityModels.Activity
+	err := s.DB.Where("id = ? AND user_id = ?", id, userID).First(&activity).Error
+	if err != nil {
+		return nil, err
+	}
+	return &activity, nil
+}
+
+func (s *ActivityService) Update(userID, id uint, activity *activityModels.Activity) error {
+	if err := s.validateActivity(userID, activity); err != nil {
 		return err
 	}
 	return s.DB.Model(&activityModels.Activity{}).Where("id = ? AND user_id = ?", id, userID).Updates(activity).Error
