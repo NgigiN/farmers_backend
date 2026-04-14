@@ -10,9 +10,9 @@ import (
 
 // ipRecord tracks the request count and the window start time for a single IP.
 type ipRecord struct {
-	count    int
+	count       int
 	windowStart time.Time
-	mu       sync.Mutex
+	mu          sync.Mutex
 }
 
 // rateLimiter holds per-IP records.

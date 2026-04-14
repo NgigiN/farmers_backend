@@ -13,8 +13,8 @@ import (
 	plantHandlers "farm-backend/internal/handlers/plants"
 	summaryHandlers "farm-backend/internal/handlers/summaries"
 	"farm-backend/internal/middleware"
-	authService "farm-backend/internal/services/auth"
 	animalServices "farm-backend/internal/services/animals"
+	authService "farm-backend/internal/services/auth"
 	plantServices "farm-backend/internal/services/plants"
 	summaryServices "farm-backend/internal/services/summaries"
 
