@@ -12,11 +12,13 @@ import (
 	inputHandlers "farm-backend/internal/handlers/inputs"
 	plantHandlers "farm-backend/internal/handlers/plants"
 	summaryHandlers "farm-backend/internal/handlers/summaries"
+	userHandlers "farm-backend/internal/handlers/users"
 	"farm-backend/internal/middleware"
 	animalServices "farm-backend/internal/services/animals"
 	authService "farm-backend/internal/services/auth"
 	plantServices "farm-backend/internal/services/plants"
 	summaryServices "farm-backend/internal/services/summaries"
+	userServices "farm-backend/internal/services/users"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -71,6 +73,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	costService := summaryServices.NewCostService(db)
 	revenueService := summaryServices.NewRevenueService(db)
 	analysisService := summaryServices.NewAnalysisService(db)
+	userService := userServices.NewUserService(db)
 
 	// ── Handlers ────────────────────────────────────────────────────────────
 	authHandler := authHandlers.NewAuthHandler(svcAuth)
@@ -91,6 +94,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	costHandler := summaryHandlers.NewCostHandler(costService)
 	revenueHandler := summaryHandlers.NewRevenueHandler(revenueService)
 	analysisHandler := summaryHandlers.NewAnalysisHandler(analysisService)
+	userHandler := userHandlers.NewUserHandler(userService)
 
 	// ── Routes ──────────────────────────────────────────────────────────────
 	api := router.Group("/api/v1")
@@ -112,6 +116,14 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	protected := api.Group("")
 	protected.Use(authMiddleware)
 	{
+		// ── Profile ──
+		profile := protected.Group("/profile")
+		{
+			profile.GET("", userHandler.GetProfile)
+			profile.PUT("", userHandler.UpdateProfile)
+			profile.PUT("/password", userHandler.ChangePassword)
+		}
+
 		// ── Plants ──
 		plants := protected.Group("/plants")
 		{
