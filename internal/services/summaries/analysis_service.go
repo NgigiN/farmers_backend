@@ -193,10 +193,10 @@ func (s *AnalysisService) GetCostBreakdownByCategory(UserID uint) ([]CategoryBre
 		Cost   float64
 	}
 	err := s.DB.Table("inputs i").
-		Joins("JOIN users u ON i.user_id = u.id").
+		Joins("LEFT JOIN seasons s ON i.source_id = s.id").
 		Where("i.user_id = ? AND i.source_type = ?", UserID, "plant").
-		Select("i.type, u.farm_name as origin, SUM(i.cost) as cost").
-		Group("i.type, u.farm_name").
+		Select("i.type, COALESCE(s.name, 'General Plant') as origin, SUM(i.cost) as cost").
+		Group("i.type, s.name").
 		Scan(&plantInputs).Error
 	if err != nil {
 		return nil, err
@@ -208,10 +208,10 @@ func (s *AnalysisService) GetCostBreakdownByCategory(UserID uint) ([]CategoryBre
 		Cost   float64
 	}
 	err = s.DB.Table("activities a").
-		Joins("JOIN users u ON a.user_id = u.id").
+		Joins("LEFT JOIN seasons s ON a.source_id = s.id").
 		Where("a.user_id = ? AND a.source_type = ?", UserID, "plant").
-		Select("a.type, u.farm_name as origin, SUM(a.cost) as cost").
-		Group("a.type, u.farm_name").
+		Select("a.type, COALESCE(s.name, 'General Plant') as origin, SUM(a.cost) as cost").
+		Group("a.type, s.name").
 		Scan(&plantActivities).Error
 	if err != nil {
 		return nil, err
