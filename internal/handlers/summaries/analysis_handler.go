@@ -10,20 +10,24 @@ import (
 
 type AnalysisHandler struct {
 	AnalysisService *summaries.AnalysisService
+	CostService     *summaries.CostService
 }
 
-func NewAnalysisHandler(svc *summaries.AnalysisService) *AnalysisHandler {
-	return &AnalysisHandler{AnalysisService: svc}
+func NewAnalysisHandler(analysisSlice *summaries.AnalysisService, costSvc *summaries.CostService) *AnalysisHandler {
+	return &AnalysisHandler{
+		AnalysisService: analysisSlice,
+		CostService:     costSvc,
+	}
 }
 
 func (h *AnalysisHandler) GetTotalCosts(c *gin.Context) {
 	UserID := c.GetUint("user_id")
-	total, err := h.AnalysisService.GetTotalCosts(UserID)
+	results, err := h.CostService.GetUnifiedDetailedCosts(UserID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"total_costs": total})
+	c.JSON(http.StatusOK, results)
 }
 
 func (h *AnalysisHandler) GetTotalRevenue(c *gin.Context) {

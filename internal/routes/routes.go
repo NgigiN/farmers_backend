@@ -93,7 +93,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	costCategoryHandler := summaryHandlers.NewCostCategoryHandler(costCategoryService)
 	costHandler := summaryHandlers.NewCostHandler(costService)
 	revenueHandler := summaryHandlers.NewRevenueHandler(revenueService)
-	analysisHandler := summaryHandlers.NewAnalysisHandler(analysisService)
+	analysisHandler := summaryHandlers.NewAnalysisHandler(analysisService, costService)
 	userHandler := userHandlers.NewUserHandler(userService)
 
 	// ── Routes ──────────────────────────────────────────────────────────────

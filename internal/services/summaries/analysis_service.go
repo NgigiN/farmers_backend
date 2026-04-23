@@ -179,73 +179,83 @@ func (s *AnalysisService) GetCostBreakdownBySource(UserID uint) (plantCosts, ani
 }
 
 type CategoryBreakdown struct {
-	Category   string
-	Type       string
-	TotalCost  float64
-	Percentage float64
+	Category   string  `json:"category"`
+	Type       string  `json:"type"`
+	Origin     string  `json:"origin"`
+	TotalCost  float64 `json:"total_cost"`
+	Percentage float64 `json:"percentage"`
 }
 
 func (s *AnalysisService) GetCostBreakdownByCategory(UserID uint) ([]CategoryBreakdown, error) {
 	var plantInputs []struct {
-		Type string
-		Cost float64
+		Type   string
+		Origin string
+		Cost   float64
 	}
-	err := s.DB.Table("inputs").
-		Where("user_id = ? AND source_type = ?", UserID, "plant").
-		Select("type, SUM(cost) as cost").
-		Group("type").
+	err := s.DB.Table("inputs i").
+		Joins("JOIN users u ON i.user_id = u.id").
+		Where("i.user_id = ? AND i.source_type = ?", UserID, "plant").
+		Select("i.type, u.farm_name as origin, SUM(i.cost) as cost").
+		Group("i.type, u.farm_name").
 		Scan(&plantInputs).Error
 	if err != nil {
 		return nil, err
 	}
 
 	var plantActivities []struct {
-		Type string
-		Cost float64
+		Type   string
+		Origin string
+		Cost   float64
 	}
-	err = s.DB.Table("activities").
-		Where("user_id = ? AND source_type = ?", UserID, "plant").
-		Select("type, SUM(cost) as cost").
-		Group("type").
+	err = s.DB.Table("activities a").
+		Joins("JOIN users u ON a.user_id = u.id").
+		Where("a.user_id = ? AND a.source_type = ?", UserID, "plant").
+		Select("a.type, u.farm_name as origin, SUM(a.cost) as cost").
+		Group("a.type, u.farm_name").
 		Scan(&plantActivities).Error
 	if err != nil {
 		return nil, err
 	}
 
 	var animalInputs []struct {
-		Type string
-		Cost float64
+		Type   string
+		Origin string
+		Cost   float64
 	}
-	err = s.DB.Table("inputs").
-		Where("user_id = ? AND source_type = ?", UserID, "animal").
-		Select("type, SUM(cost) as cost").
-		Group("type").
+	err = s.DB.Table("inputs i").
+		Joins("LEFT JOIN herds h ON i.source_id = h.id").
+		Where("i.user_id = ? AND i.source_type = ?", UserID, "animal").
+		Select("i.type, COALESCE(h.name, 'General Animal') as origin, SUM(i.cost) as cost").
+		Group("i.type, h.name").
 		Scan(&animalInputs).Error
 	if err != nil {
 		return nil, err
 	}
 
 	var animalActivities []struct {
-		Type string
-		Cost float64
+		Type   string
+		Origin string
+		Cost   float64
 	}
-	err = s.DB.Table("activities").
-		Where("user_id = ? AND source_type = ?", UserID, "animal").
-		Select("type, SUM(cost) as cost").
-		Group("type").
+	err = s.DB.Table("activities a").
+		Joins("LEFT JOIN herds h ON a.source_id = h.id").
+		Where("a.user_id = ? AND a.source_type = ?", UserID, "animal").
+		Select("a.type, COALESCE(h.name, 'General Animal') as origin, SUM(a.cost) as cost").
+		Group("a.type, h.name").
 		Scan(&animalActivities).Error
 	if err != nil {
 		return nil, err
 	}
 
 	var infrastructures []struct {
-		Type string
-		Cost float64
+		Type   string
+		Origin string
+		Cost   float64
 	}
 	err = s.DB.Table("infrastructures").
 		Where("user_id = ?", UserID).
-		Select("type, SUM(cost) as cost").
-		Group("type").
+		Select("type, name as origin, SUM(cost) as cost").
+		Group("type, name").
 		Scan(&infrastructures).Error
 	if err != nil {
 		return nil, err
@@ -254,43 +264,53 @@ func (s *AnalysisService) GetCostBreakdownByCategory(UserID uint) ([]CategoryBre
 	categoryMap := make(map[string]CategoryBreakdown)
 
 	for _, inp := range plantInputs {
-		cat := categoryMap[inp.Type]
+		key := fmt.Sprintf("%s_%s", inp.Type, inp.Origin)
+		cat := categoryMap[key]
 		cat.Category = inp.Type
 		cat.Type = "plant"
+		cat.Origin = inp.Origin
 		cat.TotalCost += inp.Cost
-		categoryMap[inp.Type] = cat
+		categoryMap[key] = cat
 	}
 
 	for _, act := range plantActivities {
-		cat := categoryMap[act.Type]
+		key := fmt.Sprintf("%s_%s", act.Type, act.Origin)
+		cat := categoryMap[key]
 		cat.Category = act.Type
 		cat.Type = "plant"
+		cat.Origin = act.Origin
 		cat.TotalCost += act.Cost
-		categoryMap[act.Type] = cat
+		categoryMap[key] = cat
 	}
 
 	for _, inp := range animalInputs {
-		cat := categoryMap[inp.Type]
+		key := fmt.Sprintf("%s_%s", inp.Type, inp.Origin)
+		cat := categoryMap[key]
 		cat.Category = inp.Type
 		cat.Type = "animal"
+		cat.Origin = inp.Origin
 		cat.TotalCost += inp.Cost
-		categoryMap[inp.Type] = cat
+		categoryMap[key] = cat
 	}
 
 	for _, act := range animalActivities {
-		cat := categoryMap[act.Type]
+		key := fmt.Sprintf("%s_%s", act.Type, act.Origin)
+		cat := categoryMap[key]
 		cat.Category = act.Type
 		cat.Type = "animal"
+		cat.Origin = act.Origin
 		cat.TotalCost += act.Cost
-		categoryMap[act.Type] = cat
+		categoryMap[key] = cat
 	}
 
 	for _, inf := range infrastructures {
-		cat := categoryMap[inf.Type]
+		key := fmt.Sprintf("%s_%s", inf.Type, inf.Origin)
+		cat := categoryMap[key]
 		cat.Category = inf.Type
 		cat.Type = "animal"
+		cat.Origin = inf.Origin
 		cat.TotalCost += inf.Cost
-		categoryMap[inf.Type] = cat
+		categoryMap[key] = cat
 	}
 
 	var totalCost float64
