@@ -384,10 +384,27 @@ func (s *AnalysisService) GetRevenueBreakdownByType(UserID uint) ([]RevenueTypeB
 }
 
 type MonthlySummary struct {
-	Month        string
-	TotalCosts   float64
-	TotalRevenue float64
-	Profit       float64
+	Month        string           `json:"month"`
+	TotalCosts   float64          `json:"total_costs"`
+	TotalRevenue float64          `json:"total_revenue"`
+	Profit       float64          `json:"profit"`
+	Breakdown    MonthlyBreakdown `json:"breakdown"`
+}
+
+type MonthlyBreakdown struct {
+	Costs   MonthlyCostBreakdown    `json:"costs"`
+	Revenue MonthlyRevenueBreakdown `json:"revenue"`
+}
+
+type MonthlyCostBreakdown struct {
+	Plant          float64 `json:"plant"`
+	Animal         float64 `json:"animal"`
+	Infrastructure float64 `json:"infrastructure"`
+}
+
+type MonthlyRevenueBreakdown struct {
+	Plant  float64 `json:"plant"`
+	Animal float64 `json:"animal"`
 }
 
 func (s *AnalysisService) GetMonthlySummary(UserID uint, year int) ([]MonthlySummary, error) {
@@ -450,45 +467,94 @@ func (s *AnalysisService) GetMonthlySummary(UserID uint, year int) ([]MonthlySum
 		return nil, err
 	}
 
-	costMap := make(map[string]float64)
+	plantInputMap := make(map[string]float64)
 	for _, c := range plantInputCosts {
-		costMap[c.Month] += c.Total
+		plantInputMap[c.Month] = c.Total
 	}
+	plantActivityMap := make(map[string]float64)
 	for _, c := range plantActivityCosts {
-		costMap[c.Month] += c.Total
+		plantActivityMap[c.Month] = c.Total
 	}
+	animalInputMap := make(map[string]float64)
 	for _, c := range animalInputCosts {
-		costMap[c.Month] += c.Total
+		animalInputMap[c.Month] = c.Total
 	}
+	animalActivityMap := make(map[string]float64)
 	for _, c := range animalActivityCosts {
-		costMap[c.Month] += c.Total
+		animalActivityMap[c.Month] = c.Total
 	}
+	infrastructureMap := make(map[string]float64)
 	for _, c := range infrastructureCosts {
-		costMap[c.Month] += c.Total
+		infrastructureMap[c.Month] = c.Total
 	}
 
-	revenueMap := make(map[string]float64)
-	for _, r := range revenueResults {
-		revenueMap[r.Month] = r.Total
+	// Since we need to split revenue by source, we need another query or filter the existing one.
+	// But let's look at the existing revenue query: it doesn't distinguish source.
+	// Let's add specific queries for revenue sources too.
+	var plantRevenueResults []struct {
+		Month string
+		Total float64
+	}
+	err = s.DB.Raw("SELECT strftime('%Y-%m', date) as month, SUM(total) as total FROM revenues WHERE user_id = ? AND source = 'plant' AND strftime('%Y', date) = ? GROUP BY strftime('%Y-%m', date)", UserID, yearStr).Scan(&plantRevenueResults).Error
+	if err != nil {
+		return nil, err
+	}
+	var animalRevenueResults []struct {
+		Month string
+		Total float64
+	}
+	err = s.DB.Raw("SELECT strftime('%Y-%m', date) as month, SUM(total) as total FROM revenues WHERE user_id = ? AND source = 'animal' AND strftime('%Y', date) = ? GROUP BY strftime('%Y-%m', date)", UserID, yearStr).Scan(&animalRevenueResults).Error
+	if err != nil {
+		return nil, err
+	}
+
+	plantRevMap := make(map[string]float64)
+	for _, r := range plantRevenueResults {
+		plantRevMap[r.Month] = r.Total
+	}
+	animalRevMap := make(map[string]float64)
+	for _, r := range animalRevenueResults {
+		animalRevMap[r.Month] = r.Total
 	}
 
 	monthSet := make(map[string]bool)
-	for month := range costMap {
-		monthSet[month] = true
-	}
-	for month := range revenueMap {
-		monthSet[month] = true
+	maps := []map[string]float64{plantInputMap, plantActivityMap, animalInputMap, animalActivityMap, infrastructureMap, plantRevMap, animalRevMap}
+	for _, m := range maps {
+		for month := range m {
+			monthSet[month] = true
+		}
 	}
 
 	var summaries []MonthlySummary
 	for month := range monthSet {
-		costs := costMap[month]
-		revenue := revenueMap[month]
+		pInp := plantInputMap[month]
+		pAct := plantActivityMap[month]
+		aInp := animalInputMap[month]
+		aAct := animalActivityMap[month]
+		inf := infrastructureMap[month]
+
+		pRev := plantRevMap[month]
+		aRev := animalRevMap[month]
+
+		totalCosts := pInp + pAct + aInp + aAct + inf
+		totalRevenue := pRev + aRev
+
 		summaries = append(summaries, MonthlySummary{
 			Month:        month,
-			TotalCosts:   costs,
-			TotalRevenue: revenue,
-			Profit:       revenue - costs,
+			TotalCosts:   totalCosts,
+			TotalRevenue: totalRevenue,
+			Profit:       totalRevenue - totalCosts,
+			Breakdown: MonthlyBreakdown{
+				Costs: MonthlyCostBreakdown{
+					Plant:          pInp + pAct,
+					Animal:         aInp + aAct,
+					Infrastructure: inf,
+				},
+				Revenue: MonthlyRevenueBreakdown{
+					Plant:  pRev,
+					Animal: aRev,
+				},
+			},
 		})
 	}
 
