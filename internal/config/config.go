@@ -7,6 +7,7 @@ type Config struct {
 	JWTSecret      string
 	Port           string
 	AllowedOrigins string
+	GoogleClientID string
 }
 
 func Load() (*Config, error) {
@@ -20,5 +21,6 @@ func Load() (*Config, error) {
 		JWTSecret:      viper.GetString("JWT_SECRET"),
 		Port:           viper.GetString("PORT"),
 		AllowedOrigins: viper.GetString("ALLOWED_ORIGINS"),
+		GoogleClientID: viper.GetString("GOOGLE_CLIENT_ID"),
 	}, nil
 }

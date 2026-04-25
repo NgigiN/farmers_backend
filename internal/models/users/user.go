@@ -8,7 +8,9 @@ type User struct {
 	FirstName string `gorm:"type:varchar(100);not null"                           json:"first_name" validate:"required,min=1"`
 	LastName  string `gorm:"type:varchar(100);not null"                           json:"last_name"  validate:"required,min=1"`
 	// Password is excluded from all JSON responses with json:"-"
-	Password string `gorm:"type:varchar(255);not null" json:"-" validate:"required,min=8"`
-	FarmName string `gorm:"type:varchar(255)"          json:"farm_name,omitempty"`
-	Location string `gorm:"type:varchar(255)"          json:"location,omitempty"`
+	Password       string `gorm:"type:varchar(255)"          json:"-" validate:"omitempty,min=8"`
+	GoogleID       string `gorm:"type:varchar(255)"          json:"google_id,omitempty"`
+	ProfilePicture string `gorm:"type:text"                  json:"profile_picture,omitempty"`
+	FarmName       string `gorm:"type:varchar(255)"          json:"farm_name,omitempty"`
+	Location       string `gorm:"type:varchar(255)"          json:"location,omitempty"`
 }
