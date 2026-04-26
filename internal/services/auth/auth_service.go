@@ -21,6 +21,19 @@ type Service struct {
 	Cfg *config.Config
 }
 
+type LoginResponse struct {
+	Token string       `json:"token"`
+	User  UserResponse `json:"user"`
+}
+
+type UserResponse struct {
+	ID             uint   `json:"id"`
+	Email          string `json:"email"`
+	FirstName      string `json:"first_name"`
+	LastName       string `json:"last_name"`
+	ProfilePicture string `json:"profile_picture"`
+}
+
 func NewService(db *gorm.DB, cfg *config.Config) *Service {
 	return &Service{DB: db, Cfg: cfg}
 }
@@ -37,31 +50,45 @@ func (s *Service) Register(user *users.User) error {
 	return s.DB.Create(user).Error
 }
 
-func (s *Service) Login(email, password string) (string, error) {
+func (s *Service) Login(email, password string) (*LoginResponse, error) {
 	var user users.User
 	if err := s.DB.Where("email = ?", email).First(&user).Error; err != nil {
-		return "", err
+		return nil, err
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		return "", err
+		return nil, err
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID,
 		"exp":     time.Now().Add(time.Hour * 24).Unix(),
 	})
-	return token.SignedString([]byte(s.Cfg.JWTSecret))
+	tokenStr, err := token.SignedString([]byte(s.Cfg.JWTSecret))
+	if err != nil {
+		return nil, err
+	}
+
+	return &LoginResponse{
+		Token: tokenStr,
+		User: UserResponse{
+			ID:             user.ID,
+			Email:          user.Email,
+			FirstName:      user.FirstName,
+			LastName:       user.LastName,
+			ProfilePicture: user.ProfilePicture,
+		},
+	}, nil
 }
 
-func (s *Service) GoogleLogin(idTokenStr string) (string, error) {
+func (s *Service) GoogleLogin(idTokenStr string) (*LoginResponse, error) {
 	ctx := context.Background()
 	payload, err := idtoken.Validate(ctx, idTokenStr, s.Cfg.GoogleClientID)
 	if err != nil {
-		return "", errors.New("invalid google id token: " + err.Error())
+		return nil, errors.New("invalid google id token: " + err.Error())
 	}
 
 	email, ok := payload.Claims["email"].(string)
 	if !ok || email == "" {
-		return "", errors.New("email not found in token claims")
+		return nil, errors.New("email not found in token claims")
 	}
 
 	var user users.User
@@ -82,10 +109,10 @@ func (s *Service) GoogleLogin(idTokenStr string) (string, error) {
 				ProfilePicture: profilePic,
 			}
 			if createErr := s.DB.Create(&user).Error; createErr != nil {
-				return "", createErr
+				return nil, createErr
 			}
 		} else {
-			return "", err
+			return nil, err
 		}
 	} else if user.GoogleID == "" {
 		// Update user with GoogleID and ProfilePicture if missing
@@ -96,7 +123,7 @@ func (s *Service) GoogleLogin(idTokenStr string) (string, error) {
 			updates["profile_picture"], _ = payload.Claims["picture"].(string)
 		}
 		if updateErr := s.DB.Model(&user).Updates(updates).Error; updateErr != nil {
-			return "", updateErr
+			return nil, updateErr
 		}
 	}
 
@@ -104,5 +131,19 @@ func (s *Service) GoogleLogin(idTokenStr string) (string, error) {
 		"user_id": user.ID,
 		"exp":     time.Now().Add(time.Hour * 24).Unix(),
 	})
-	return token.SignedString([]byte(s.Cfg.JWTSecret))
+	tokenStr, err := token.SignedString([]byte(s.Cfg.JWTSecret))
+	if err != nil {
+		return nil, err
+	}
+
+	return &LoginResponse{
+		Token: tokenStr,
+		User: UserResponse{
+			ID:             user.ID,
+			Email:          user.Email,
+			FirstName:      user.FirstName,
+			LastName:       user.LastName,
+			ProfilePicture: user.ProfilePicture,
+		},
+	}, nil
 }

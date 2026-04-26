@@ -39,12 +39,12 @@ func (h *Handler) Login(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	token, err := h.AuthService.Login(req.Email, req.Password)
+	resp, err := h.AuthService.Login(req.Email, req.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"token": token})
+	c.JSON(http.StatusOK, resp)
 }
 
 func (h *Handler) GoogleLogin(c *gin.Context) {
@@ -55,10 +55,10 @@ func (h *Handler) GoogleLogin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	token, err := h.AuthService.GoogleLogin(req.IDToken)
+	resp, err := h.AuthService.GoogleLogin(req.IDToken)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"token": token})
+	c.JSON(http.StatusOK, resp)
 }
