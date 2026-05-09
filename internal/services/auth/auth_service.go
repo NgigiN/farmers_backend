@@ -32,6 +32,8 @@ type UserResponse struct {
 	FirstName      string `json:"first_name"`
 	LastName       string `json:"last_name"`
 	ProfilePicture string `json:"profile_picture"`
+	FarmName       string `json:"farm_name"`
+	Location       string `json:"location"`
 }
 
 func NewService(db *gorm.DB, cfg *config.Config) *Service {
@@ -75,6 +77,8 @@ func (s *Service) Login(email, password string) (*LoginResponse, error) {
 			FirstName:      user.FirstName,
 			LastName:       user.LastName,
 			ProfilePicture: user.ProfilePicture,
+			FarmName:       user.FarmName,
+			Location:       user.Location,
 		},
 	}, nil
 }
@@ -144,6 +148,8 @@ func (s *Service) GoogleLogin(idTokenStr string) (*LoginResponse, error) {
 			FirstName:      user.FirstName,
 			LastName:       user.LastName,
 			ProfilePicture: user.ProfilePicture,
+			FarmName:       user.FarmName,
+			Location:       user.Location,
 		},
 	}, nil
 }
