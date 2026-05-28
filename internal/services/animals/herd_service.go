@@ -1,6 +1,7 @@
 package animals
 
 import (
+	"errors"
 	"farm-backend/internal/middleware"
 	animalModels "farm-backend/internal/models/animals"
 
@@ -23,6 +24,7 @@ func (s *HerdService) Create(UserID uint, herd *animalModels.Herd) error {
 	if err := middleware.ValidateStruct(herd); err != nil {
 		return err
 	}
+	herd.CurrentHeadCount = herd.InitialHeadCount
 	return s.DB.Create(herd).Error
 }
 
@@ -49,4 +51,32 @@ func (s *HerdService) Update(userID, id uint, herd *animalModels.Herd) error {
 
 func (s *HerdService) Delete(userID, id uint) error {
 	return s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(&animalModels.Herd{}).Error
+}
+
+func (s *HerdService) RecordActivity(userID uint, herdID uint, activity *animalModels.HerdActivity) error {
+	return s.DB.Transaction(func(tx *gorm.DB) error {
+		var herd animalModels.Herd
+		if err := tx.Where("id = ? AND user_id = ?", herdID, userID).First(&herd).Error; err != nil {
+			return err
+		}
+
+		switch activity.ActivityType {
+		case "fatality":
+			if herd.CurrentHeadCount-activity.Count < 0 {
+				return errors.New("cannot record more fatalities than current headcount")
+			}
+			herd.CurrentHeadCount -= activity.Count
+		case "birth":
+			herd.CurrentHeadCount += activity.Count
+		default:
+			return errors.New("invalid activity type")
+		}
+
+		activity.HerdID = herd.ID
+		if err := tx.Create(activity).Error; err != nil {
+			return err
+		}
+
+		return tx.Save(&herd).Error
+	})
 }

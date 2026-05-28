@@ -170,6 +170,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 			herds.GET("/:id", herdHandler.GetHerd)
 			herds.PUT("/:id", herdHandler.UpdateHerd)
 			herds.DELETE("/:id", herdHandler.DeleteHerd)
+			herds.POST("/:id/activities", herdHandler.RecordActivity)
 		}
 
 		animals := protected.Group("/animals")

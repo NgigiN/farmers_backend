@@ -105,3 +105,34 @@ func (h *HerdHandler) DeleteHerd(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Herd deleted successfully"})
 }
+
+func (h *HerdHandler) RecordActivity(c *gin.Context) {
+	UserID := c.GetUint("user_id")
+	id := c.Param("id")
+	idUint, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid herd ID"})
+		return
+	}
+
+	var activity animals.HerdActivity
+	if err := c.ShouldBindJSON(&activity); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.HerdService.RecordActivity(UserID, uint(idUint), &activity); err != nil {
+		if err.Error() == "cannot record more fatalities than current headcount" || err.Error() == "invalid activity type" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Herd not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, activity)
+}
