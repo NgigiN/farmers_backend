@@ -29,7 +29,7 @@ func main() {
 
 	port := cfg.Port
 	if port == "" {
-		port = "6060"
+		port = "8080"
 	}
 	// set up gin server
 	server := &http.Server{
@@ -39,7 +39,7 @@ func main() {
 
 	go func() {
 		log.Printf("Starting server on port %s", port)
-		log.Printf("Avaliable on http://localhost:%s/api", port)
+		log.Printf("Available on http://0.0.0.0:%s/api (all interfaces)", port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Failed to start server: %v", err)
 		}
