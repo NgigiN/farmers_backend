@@ -9,6 +9,7 @@ import (
 	activityHandlers "farm-backend/internal/handlers/activities"
 	animalHandlers "farm-backend/internal/handlers/animals"
 	authHandlers "farm-backend/internal/handlers/auth"
+	harvestHandlers "farm-backend/internal/handlers/harvests"
 	inputHandlers "farm-backend/internal/handlers/inputs"
 	plantHandlers "farm-backend/internal/handlers/plants"
 	summaryHandlers "farm-backend/internal/handlers/summaries"
@@ -61,6 +62,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	seasonService := plantServices.NewSeasonService(db)
 	activityService := plantServices.NewActivityService(db)
 	inputService := plantServices.NewInputService(db)
+	harvestService := plantServices.NewHarvestService(db)
 
 	// Animal
 	animalTypeService := animalServices.NewAnimalTypeService(db)
@@ -84,6 +86,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 
 	activityHandler := activityHandlers.NewActivityHandler(activityService)
 	inputHandler := inputHandlers.NewInputHandler(inputService)
+	harvestHandler := harvestHandlers.NewHarvestHandler(harvestService)
 
 	animalTypeHandler := animalHandlers.NewAnimalTypeHandler(animalTypeService)
 	herdHandler := animalHandlers.NewHerdHandler(herdService)
@@ -210,6 +213,16 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 			inputs.GET("/:id", inputHandler.GetInput)
 			inputs.PUT("/:id", inputHandler.UpdateInput)
 			inputs.DELETE("/:id", inputHandler.DeleteInput)
+		}
+
+		// ?season_id=<id>
+		harvests := protected.Group("/harvests")
+		{
+			harvests.POST("", harvestHandler.CreateHarvest)
+			harvests.GET("", harvestHandler.ListHarvests)
+			harvests.GET("/:id", harvestHandler.GetHarvest)
+			harvests.PUT("/:id", harvestHandler.UpdateHarvest)
+			harvests.DELETE("/:id", harvestHandler.DeleteHarvest)
 		}
 
 		// ── Costs ──
