@@ -1,7 +1,6 @@
 package animals
 
 import (
-	"farm-backend/internal/middleware"
 	animalModels "farm-backend/internal/models/animals"
 
 	"gorm.io/gorm"
@@ -17,9 +16,6 @@ func NewAnimalTypeService(db *gorm.DB) *AnimalTypeService {
 
 func (s *AnimalTypeService) Create(UserID uint, animalType *animalModels.AnimalType) error {
 	animalType.UserID = UserID
-	if err := middleware.ValidateStruct(animalType); err != nil {
-		return err
-	}
 	return s.DB.Create(animalType).Error
 }
 
@@ -38,10 +34,10 @@ func (s *AnimalTypeService) Get(UserID uint, id uint) (*animalModels.AnimalType,
 }
 
 func (s *AnimalTypeService) Update(userID, id uint, animalType *animalModels.AnimalType) error {
-	if err := middleware.ValidateStruct(animalType); err != nil {
-		return err
-	}
-	return s.DB.Model(&animalModels.AnimalType{}).Where("id = ? AND user_id = ?", id, userID).Updates(animalType).Error
+	return s.DB.Model(&animalModels.AnimalType{}).
+		Where("id = ? AND user_id = ?", id, userID).
+		Select("Name", "Notes").
+		Updates(animalType).Error
 }
 
 func (s *AnimalTypeService) Delete(userID, id uint) error {

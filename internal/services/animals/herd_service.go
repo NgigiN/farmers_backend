@@ -2,7 +2,6 @@ package animals
 
 import (
 	"errors"
-	"farm-backend/internal/middleware"
 	animalModels "farm-backend/internal/models/animals"
 
 	"gorm.io/gorm"
@@ -19,9 +18,6 @@ func NewHerdService(db *gorm.DB) *HerdService {
 func (s *HerdService) Create(UserID uint, herd *animalModels.Herd) error {
 	herd.UserID = UserID
 	if err := s.DB.Where("id = ? AND user_id = ?", herd.AnimalTypeID, UserID).First(&animalModels.AnimalType{}).Error; err != nil {
-		return err
-	}
-	if err := middleware.ValidateStruct(herd); err != nil {
 		return err
 	}
 	herd.CurrentHeadCount = herd.InitialHeadCount
@@ -43,10 +39,10 @@ func (s *HerdService) Get(UserID uint, id uint) (*animalModels.Herd, error) {
 }
 
 func (s *HerdService) Update(userID, id uint, herd *animalModels.Herd) error {
-	if err := middleware.ValidateStruct(herd); err != nil {
-		return err
-	}
-	return s.DB.Model(&animalModels.Herd{}).Where("id = ? AND user_id = ?", id, userID).Updates(herd).Error
+	return s.DB.Model(&animalModels.Herd{}).
+		Where("id = ? AND user_id = ?", id, userID).
+		Select("Name", "AnimalTypeID", "Location").
+		Updates(herd).Error
 }
 
 func (s *HerdService) Delete(userID, id uint) error {
@@ -54,6 +50,9 @@ func (s *HerdService) Delete(userID, id uint) error {
 }
 
 func (s *HerdService) RecordActivity(userID uint, herdID uint, activity *animalModels.HerdActivity) error {
+	if activity.Count <= 0 {
+		return errors.New("count must be greater than zero")
+	}
 	return s.DB.Transaction(func(tx *gorm.DB) error {
 		var herd animalModels.Herd
 		if err := tx.Where("id = ? AND user_id = ?", herdID, userID).First(&herd).Error; err != nil {

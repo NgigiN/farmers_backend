@@ -3,8 +3,6 @@ package summaries
 import (
 	summariesModels "farm-backend/internal/models/summaries"
 
-	"farm-backend/internal/middleware"
-
 	"gorm.io/gorm"
 )
 
@@ -54,9 +52,6 @@ var defaultPlantActivityCategories = []summariesModels.CostCategory{
 
 func (s *CostCategoryService) Create(UserID uint, costCategory *summariesModels.CostCategory) error {
 	costCategory.UserID = UserID
-	if err := middleware.ValidateStruct(costCategory); err != nil {
-		return err
-	}
 	return s.DB.Create(costCategory).Error
 }
 
@@ -107,10 +102,10 @@ func (s *CostCategoryService) Get(UserID uint, id uint) (*summariesModels.CostCa
 }
 
 func (s *CostCategoryService) Update(userID, id uint, costCategory *summariesModels.CostCategory) error {
-	if err := middleware.ValidateStruct(costCategory); err != nil {
-		return err
-	}
-	return s.DB.Model(&summariesModels.CostCategory{}).Where("id = ? AND user_id = ?", id, userID).Updates(costCategory).Error
+	return s.DB.Model(&summariesModels.CostCategory{}).
+		Where("id = ? AND user_id = ?", id, userID).
+		Select("Name", "Type", "Category").
+		Updates(costCategory).Error
 }
 
 func (s *CostCategoryService) Delete(userID, id uint) error {

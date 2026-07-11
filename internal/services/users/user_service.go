@@ -2,7 +2,7 @@ package users
 
 import (
 	"errors"
-	"farm-backend/internal/middleware"
+	"farm-backend/internal/validation"
 	models "farm-backend/internal/models/users"
 
 	"golang.org/x/crypto/bcrypt"
@@ -17,13 +17,6 @@ func NewUserService(db *gorm.DB) *UserService {
 	return &UserService{DB: db}
 }
 
-type UpdateProfileDTO struct {
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	FarmName  string `json:"farm_name"`
-	Location  string `json:"location"`
-}
-
 func (s *UserService) GetProfile(userID uint) (*models.User, error) {
 	var user models.User
 	if err := s.DB.First(&user, userID).Error; err != nil {
@@ -32,10 +25,12 @@ func (s *UserService) GetProfile(userID uint) (*models.User, error) {
 	return &user, nil
 }
 
-func (s *UserService) UpdateProfile(userID uint, req *UpdateProfileDTO) error {
-	if err := middleware.ValidateStruct(req); err != nil {
+func (s *UserService) UpdateProfile(userID uint, req *validation.UpdateProfileRequest) error {
+	if err := validation.ValidateStruct(req); err != nil {
 		return err
 	}
+	req.Sanitize()
+
 	var user models.User
 	if err := s.DB.First(&user, userID).Error; err != nil {
 		return err
@@ -47,28 +42,26 @@ func (s *UserService) UpdateProfile(userID uint, req *UpdateProfileDTO) error {
 	if req.LastName != "" {
 		user.LastName = req.LastName
 	}
-	if req.FarmName != "" {
-		user.FarmName = req.FarmName
-	}
-	if req.Location != "" {
-		user.Location = req.Location
-	}
+	user.FarmName = req.FarmName
+	user.Location = req.Location
 
 	return s.DB.Save(&user).Error
 }
 
 func (s *UserService) ChangePassword(userID uint, oldPassword, newPassword string) error {
+	if len(newPassword) < 8 {
+		return errors.New("new password must be at least 8 characters")
+	}
+
 	var user models.User
 	if err := s.DB.First(&user, userID).Error; err != nil {
 		return err
 	}
 
-	// Verify old password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(oldPassword)); err != nil {
 		return errors.New("invalid old password")
 	}
 
-	// Hash new password
 	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return err

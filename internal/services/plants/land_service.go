@@ -1,7 +1,6 @@
 package plants
 
 import (
-	"farm-backend/internal/middleware"
 	plantModels "farm-backend/internal/models/plants"
 
 	"gorm.io/gorm"
@@ -17,9 +16,6 @@ func NewLandService(db *gorm.DB) *LandService {
 
 func (s *LandService) Create(UserID uint, land *plantModels.Land) error {
 	land.UserID = UserID
-	if err := middleware.ValidateStruct(land); err != nil {
-		return err
-	}
 	return s.DB.Create(land).Error
 }
 
@@ -38,10 +34,10 @@ func (s *LandService) Get(UserID uint, id uint) (*plantModels.Land, error) {
 }
 
 func (s *LandService) Update(userID, id uint, land *plantModels.Land) error {
-	if err := middleware.ValidateStruct(land); err != nil {
-		return err
-	}
-	return s.DB.Model(&plantModels.Land{}).Where("id = ? AND user_id = ?", id, userID).Updates(land).Error
+	return s.DB.Model(&plantModels.Land{}).
+		Where("id = ? AND user_id = ?", id, userID).
+		Select("Name", "Size", "Location", "SoilType").
+		Updates(land).Error
 }
 
 func (s *LandService) Delete(userID, id uint) error {

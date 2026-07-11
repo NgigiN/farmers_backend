@@ -2,7 +2,6 @@ package plants
 
 import (
 	"errors"
-	"farm-backend/internal/middleware"
 	animalModels "farm-backend/internal/models/animals"
 	inputModels "farm-backend/internal/models/plants"
 	summaryModels "farm-backend/internal/models/summaries"
@@ -45,7 +44,7 @@ func (s *InputService) validateInput(userID uint, input *inputModels.Input) erro
 		return errors.New("input type does not exist in cost categories — please create it first")
 	}
 
-	return middleware.ValidateStruct(input)
+	return nil
 }
 
 func (s *InputService) Create(userID uint, input *inputModels.Input) error {
@@ -79,7 +78,10 @@ func (s *InputService) Update(userID, id uint, input *inputModels.Input) error {
 	if err := s.validateInput(userID, input); err != nil {
 		return err
 	}
-	return s.DB.Model(&inputModels.Input{}).Where("id = ? AND user_id = ?", id, userID).Updates(input).Error
+	return s.DB.Model(&inputModels.Input{}).
+		Where("id = ? AND user_id = ?", id, userID).
+		Select("SourceType", "SourceID", "AnimalID", "Type", "Quantity", "Cost", "Date", "Notes").
+		Updates(input).Error
 }
 
 func (s *InputService) Delete(userID, id uint) error {

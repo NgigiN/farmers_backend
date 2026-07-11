@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"farm-backend/internal/config"
-	"farm-backend/internal/middleware"
+	"farm-backend/internal/validation"
 	users "farm-backend/internal/models/users"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -41,9 +41,18 @@ func NewService(db *gorm.DB, cfg *config.Config) *Service {
 }
 
 func (s *Service) Register(user *users.User) error {
-	if err := middleware.ValidateStruct(user); err != nil {
+	req := &validation.RegisterRequest{
+		Email:     user.Email,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		Password:  user.Password,
+	}
+	req.Sanitize()
+	if err := validation.ValidateStruct(req); err != nil {
 		return err
 	}
+	user.FirstName = req.FirstName
+	user.LastName = req.LastName
 	hashed, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err

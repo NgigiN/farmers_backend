@@ -2,7 +2,6 @@ package plants
 
 import (
 	"errors"
-	"farm-backend/internal/middleware"
 	animalModels "farm-backend/internal/models/animals"
 	activityModels "farm-backend/internal/models/plants"
 	summaryModels "farm-backend/internal/models/summaries"
@@ -44,7 +43,7 @@ func (s *ActivityService) validateActivity(userID uint, activity *activityModels
 		return errors.New("activity type does not exist in cost categories — please create it first")
 	}
 
-	return middleware.ValidateStruct(activity)
+	return nil
 }
 
 func (s *ActivityService) Create(userID uint, activity *activityModels.Activity) error {
@@ -78,7 +77,10 @@ func (s *ActivityService) Update(userID, id uint, activity *activityModels.Activ
 	if err := s.validateActivity(userID, activity); err != nil {
 		return err
 	}
-	return s.DB.Model(&activityModels.Activity{}).Where("id = ? AND user_id = ?", id, userID).Updates(activity).Error
+	return s.DB.Model(&activityModels.Activity{}).
+		Where("id = ? AND user_id = ?", id, userID).
+		Select("SourceType", "SourceID", "AnimalID", "Type", "Details", "Cost", "Date", "Notes").
+		Updates(activity).Error
 }
 
 func (s *ActivityService) Delete(userID, id uint) error {

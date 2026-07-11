@@ -2,7 +2,6 @@ package plants
 
 import (
 	"errors"
-	"farm-backend/internal/middleware"
 	plantModels "farm-backend/internal/models/plants"
 	"strings"
 
@@ -34,7 +33,7 @@ func (s *HarvestService) validateHarvest(userID uint, harvest *plantModels.Harve
 		return errors.New("season not found or does not belong to user")
 	}
 
-	return middleware.ValidateStruct(harvest)
+	return nil
 }
 
 func (s *HarvestService) Create(userID uint, harvest *plantModels.Harvest) error {
@@ -69,6 +68,7 @@ func (s *HarvestService) Update(userID, id uint, harvest *plantModels.Harvest) e
 	}
 	return s.DB.Model(&plantModels.Harvest{}).
 		Where("id = ? AND user_id = ?", id, userID).
+		Select("SeasonID", "Quantity", "Unit", "Date", "Notes").
 		Updates(harvest).Error
 }
 
