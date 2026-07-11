@@ -31,6 +31,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 
 	router.Use(middleware.SecurityHeaders())
 	router.Use(middleware.LoggingMiddleware())
+	router.Use(middleware.MaxBodySize())
 
 	// Build CORS allowed-origins from config.
 	// Set ALLOWED_ORIGINS in .env, e.g.: ALLOWED_ORIGINS=http://localhost:3000,https://app.mysite.com
