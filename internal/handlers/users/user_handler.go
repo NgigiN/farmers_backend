@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	userService "farm-backend/internal/services/users"
+	"farm-backend/internal/validation"
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,7 +28,7 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 
 	user, err := h.UserService.GetProfile(userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 
@@ -43,14 +44,14 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 	}
 	userID := val.(uint)
 
-	var req userService.UpdateProfileDTO
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var req validation.UpdateProfileRequest
+	if err := validation.BindAndValidate(c, &req); err != nil {
+		validation.RespondBindingError(c, err)
 		return
 	}
 
 	if err := h.UserService.UpdateProfile(userID, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 
@@ -66,17 +67,14 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 	}
 	userID := val.(uint)
 
-	var req struct {
-		OldPassword string `json:"old_password" binding:"required"`
-		NewPassword string `json:"new_password" binding:"required"`
-	}
+	var req validation.ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		validation.RespondBindingError(c, err)
 		return
 	}
 
 	if err := h.UserService.ChangePassword(userID, req.OldPassword, req.NewPassword); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 

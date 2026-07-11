@@ -1,8 +1,8 @@
 package auth
 
 import (
-	users "farm-backend/internal/models/users"
 	authService "farm-backend/internal/services/auth"
+	"farm-backend/internal/validation"
 
 	"net/http"
 
@@ -18,13 +18,14 @@ func NewAuthHandler(svc *authService.Service) *Handler {
 }
 
 func (h *Handler) Register(c *gin.Context) {
-	var user users.User
-	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var req validation.RegisterRequest
+	if err := validation.BindAndValidate(c, &req); err != nil {
+		validation.RespondBindingError(c, err)
 		return
 	}
-	if err := h.AuthService.Register(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	user := validation.UserFromRegisterRequest(&req)
+	if err := h.AuthService.Register(user); err != nil {
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"message": "User registered successfully"})
@@ -36,7 +37,7 @@ func (h *Handler) Login(c *gin.Context) {
 		Password string `json:"password" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		validation.RespondBindingError(c, err)
 		return
 	}
 	resp, err := h.AuthService.Login(req.Email, req.Password)
@@ -52,7 +53,7 @@ func (h *Handler) GoogleLogin(c *gin.Context) {
 		IDToken string `json:"id_token" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		validation.RespondBindingError(c, err)
 		return
 	}
 	resp, err := h.AuthService.GoogleLogin(req.IDToken)

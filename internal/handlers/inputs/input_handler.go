@@ -1,8 +1,8 @@
 package inputs
 
 import (
-	inputs "farm-backend/internal/models/plants"
 	plants "farm-backend/internal/services/plants"
+	"farm-backend/internal/validation"
 	"net/http"
 	"strconv"
 
@@ -20,25 +20,29 @@ func NewInputHandler(inputService *plants.InputService) *InputHandler {
 
 func (h *InputHandler) CreateInput(c *gin.Context) {
 	UserID := c.GetUint("user_id")
-	var input inputs.Input
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var req validation.InputRequest
+	if err := validation.BindAndValidate(c, &req); err != nil {
+		validation.RespondBindingError(c, err)
 		return
 	}
-	if err := h.InputService.Create(UserID, &input); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	entity := validation.InputFromRequest(&req)
+	if err := h.InputService.Create(UserID, entity); err != nil {
+		validation.RespondError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, input)
+	c.JSON(http.StatusCreated, entity)
 }
 
 func (h *InputHandler) ListInputs(c *gin.Context) {
 	UserID := c.GetUint("user_id")
-	// filtering is done at the SQL level in the service
-	sourceType := c.Query("source_type")
+	sourceType, err := validation.ValidateSourceType(c.Query("source_type"))
+	if err != nil {
+		validation.RespondError(c, err)
+		return
+	}
 	inputList, err := h.InputService.List(UserID, sourceType)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, inputList)
@@ -55,10 +59,10 @@ func (h *InputHandler) GetInput(c *gin.Context) {
 	input, err := h.InputService.Get(UserID, uint(idUint))
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Input not found"})
+			validation.RespondNotFound(c, "Input not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, input)
@@ -72,22 +76,23 @@ func (h *InputHandler) UpdateInput(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input ID"})
 		return
 	}
-	var input inputs.Input
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var req validation.InputRequest
+	if err := validation.BindAndValidate(c, &req); err != nil {
+		validation.RespondBindingError(c, err)
 		return
 	}
-	if err := h.InputService.Update(UserID, uint(idUint), &input); err != nil {
+	entity := validation.InputFromRequest(&req)
+	if err := h.InputService.Update(UserID, uint(idUint), entity); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Input not found"})
+			validation.RespondNotFound(c, "Input not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	updated, err := h.InputService.Get(UserID, uint(idUint))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "input updated but could not be retrieved"})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, updated)
@@ -103,10 +108,10 @@ func (h *InputHandler) DeleteInput(c *gin.Context) {
 	}
 	if err := h.InputService.Delete(UserID, uint(idUint)); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Input not found"})
+			validation.RespondNotFound(c, "Input not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Input deleted successfully"})

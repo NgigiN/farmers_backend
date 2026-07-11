@@ -1,8 +1,8 @@
 package animals
 
 import (
-	animals "farm-backend/internal/models/animals"
 	services "farm-backend/internal/services/animals"
+	"farm-backend/internal/validation"
 	"net/http"
 	"strconv"
 
@@ -20,23 +20,24 @@ func NewHerdHandler(herdService *services.HerdService) *HerdHandler {
 
 func (h *HerdHandler) CreateHerd(c *gin.Context) {
 	UserID := c.GetUint("user_id")
-	var herd animals.Herd
-	if err := c.ShouldBindJSON(&herd); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var req validation.HerdRequest
+	if err := validation.BindAndValidate(c, &req); err != nil {
+		validation.RespondBindingError(c, err)
 		return
 	}
-	if err := h.HerdService.Create(UserID, &herd); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	entity := validation.HerdFromRequest(&req)
+	if err := h.HerdService.Create(UserID, entity); err != nil {
+		validation.RespondError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, herd)
+	c.JSON(http.StatusCreated, entity)
 }
 
 func (h *HerdHandler) ListHerds(c *gin.Context) {
 	UserID := c.GetUint("user_id")
 	herds, err := h.HerdService.List(UserID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, herds)
@@ -53,10 +54,10 @@ func (h *HerdHandler) GetHerd(c *gin.Context) {
 	herd, err := h.HerdService.Get(UserID, uint(idUint))
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Herd not found"})
+			validation.RespondNotFound(c, "Herd not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, herd)
@@ -70,17 +71,18 @@ func (h *HerdHandler) UpdateHerd(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid herd ID"})
 		return
 	}
-	var herd animals.Herd
-	if err := c.ShouldBindJSON(&herd); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var req validation.HerdRequest
+	if err := validation.BindAndValidate(c, &req); err != nil {
+		validation.RespondBindingError(c, err)
 		return
 	}
-	if err := h.HerdService.Update(UserID, uint(idUint), &herd); err != nil {
+	entity := validation.HerdFromRequest(&req)
+	if err := h.HerdService.Update(UserID, uint(idUint), entity); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Herd not found"})
+			validation.RespondNotFound(c, "Herd not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	updated, _ := h.HerdService.Get(UserID, uint(idUint))
@@ -97,10 +99,10 @@ func (h *HerdHandler) DeleteHerd(c *gin.Context) {
 	}
 	if err := h.HerdService.Delete(UserID, uint(idUint)); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Herd not found"})
+			validation.RespondNotFound(c, "Herd not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Herd deleted successfully"})
@@ -115,24 +117,21 @@ func (h *HerdHandler) RecordActivity(c *gin.Context) {
 		return
 	}
 
-	var activity animals.HerdActivity
-	if err := c.ShouldBindJSON(&activity); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var req validation.HerdActivityRequest
+	if err := validation.BindAndValidate(c, &req); err != nil {
+		validation.RespondBindingError(c, err)
 		return
 	}
+	entity := validation.HerdActivityFromRequest(&req)
 
-	if err := h.HerdService.RecordActivity(UserID, uint(idUint), &activity); err != nil {
-		if err.Error() == "cannot record more fatalities than current headcount" || err.Error() == "invalid activity type" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
+	if err := h.HerdService.RecordActivity(UserID, uint(idUint), entity); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Herd not found"})
+			validation.RespondNotFound(c, "Herd not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, activity)
+	c.JSON(http.StatusCreated, entity)
 }

@@ -1,8 +1,8 @@
 package activities
 
 import (
-	activities "farm-backend/internal/models/plants"
 	plants "farm-backend/internal/services/plants"
+	"farm-backend/internal/validation"
 	"net/http"
 	"strconv"
 
@@ -20,25 +20,29 @@ func NewActivityHandler(activityService *plants.ActivityService) *ActivityHandle
 
 func (h *ActivityHandler) CreateActivity(c *gin.Context) {
 	UserID := c.GetUint("user_id")
-	var activity activities.Activity
-	if err := c.ShouldBindJSON(&activity); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var req validation.ActivityRequest
+	if err := validation.BindAndValidate(c, &req); err != nil {
+		validation.RespondBindingError(c, err)
 		return
 	}
-	if err := h.ActivityService.Create(UserID, &activity); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	entity := validation.ActivityFromRequest(&req)
+	if err := h.ActivityService.Create(UserID, entity); err != nil {
+		validation.RespondError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, activity)
+	c.JSON(http.StatusCreated, entity)
 }
 
 func (h *ActivityHandler) ListActivities(c *gin.Context) {
 	UserID := c.GetUint("user_id")
-	// filtering is done at the SQL level in the service
-	sourceType := c.Query("source_type")
+	sourceType, err := validation.ValidateSourceType(c.Query("source_type"))
+	if err != nil {
+		validation.RespondError(c, err)
+		return
+	}
 	activityList, err := h.ActivityService.List(UserID, sourceType)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, activityList)
@@ -55,10 +59,10 @@ func (h *ActivityHandler) GetActivity(c *gin.Context) {
 	activity, err := h.ActivityService.Get(UserID, uint(idUint))
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Activity not found"})
+			validation.RespondNotFound(c, "Activity not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, activity)
@@ -72,22 +76,23 @@ func (h *ActivityHandler) UpdateActivity(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid activity ID"})
 		return
 	}
-	var activity activities.Activity
-	if err := c.ShouldBindJSON(&activity); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var req validation.ActivityRequest
+	if err := validation.BindAndValidate(c, &req); err != nil {
+		validation.RespondBindingError(c, err)
 		return
 	}
-	if err := h.ActivityService.Update(UserID, uint(idUint), &activity); err != nil {
+	entity := validation.ActivityFromRequest(&req)
+	if err := h.ActivityService.Update(UserID, uint(idUint), entity); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Activity not found"})
+			validation.RespondNotFound(c, "Activity not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	updated, err := h.ActivityService.Get(UserID, uint(idUint))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "activity updated but could not be retrieved"})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, updated)
@@ -103,10 +108,10 @@ func (h *ActivityHandler) DeleteActivity(c *gin.Context) {
 	}
 	if err := h.ActivityService.Delete(UserID, uint(idUint)); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Activity not found"})
+			validation.RespondNotFound(c, "Activity not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Activity deleted successfully"})

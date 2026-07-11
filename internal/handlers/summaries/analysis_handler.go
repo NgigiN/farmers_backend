@@ -2,6 +2,7 @@ package summaries
 
 import (
 	summaries "farm-backend/internal/services/summaries"
+	"farm-backend/internal/validation"
 	"net/http"
 	"strconv"
 
@@ -24,7 +25,7 @@ func (h *AnalysisHandler) GetTotalCosts(c *gin.Context) {
 	UserID := c.GetUint("user_id")
 	results, err := h.CostService.GetUnifiedDetailedCosts(UserID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, results)
@@ -34,7 +35,7 @@ func (h *AnalysisHandler) GetTotalRevenue(c *gin.Context) {
 	UserID := c.GetUint("user_id")
 	total, err := h.AnalysisService.GetTotalRevenue(UserID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"total_revenue": total})
@@ -44,7 +45,7 @@ func (h *AnalysisHandler) GetProfit(c *gin.Context) {
 	UserID := c.GetUint("user_id")
 	profit, err := h.AnalysisService.GetProfit(UserID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"profit": profit})
@@ -54,7 +55,7 @@ func (h *AnalysisHandler) GetCostBreakdown(c *gin.Context) {
 	UserID := c.GetUint("user_id")
 	breakdown, err := h.AnalysisService.GetCostBreakdownByCategory(UserID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, breakdown)
@@ -64,7 +65,7 @@ func (h *AnalysisHandler) GetRevenueBreakdown(c *gin.Context) {
 	UserID := c.GetUint("user_id")
 	breakdown, err := h.AnalysisService.GetRevenueBreakdownByType(UserID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, breakdown)
@@ -85,7 +86,7 @@ func (h *AnalysisHandler) GetMonthlySummary(c *gin.Context) {
 	}
 	summary, err := h.AnalysisService.GetMonthlySummary(UserID, year)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, summary)

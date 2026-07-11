@@ -1,8 +1,8 @@
 package animals
 
 import (
-	animals "farm-backend/internal/models/animals"
 	services "farm-backend/internal/services/animals"
+	"farm-backend/internal/validation"
 	"net/http"
 	"strconv"
 
@@ -20,23 +20,24 @@ func NewInfrastructureHandler(infrastructureService *services.InfrastructureServ
 
 func (h *InfrastructureHandler) CreateInfrastructure(c *gin.Context) {
 	UserID := c.GetUint("user_id")
-	var infrastructure animals.Infrastructure
-	if err := c.ShouldBindJSON(&infrastructure); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var req validation.InfrastructureRequest
+	if err := validation.BindAndValidate(c, &req); err != nil {
+		validation.RespondBindingError(c, err)
 		return
 	}
-	if err := h.InfrastructureService.Create(UserID, &infrastructure); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	entity := validation.InfrastructureFromRequest(&req)
+	if err := h.InfrastructureService.Create(UserID, entity); err != nil {
+		validation.RespondError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, infrastructure)
+	c.JSON(http.StatusCreated, entity)
 }
 
 func (h *InfrastructureHandler) ListInfrastructures(c *gin.Context) {
 	UserID := c.GetUint("user_id")
 	infrastructures, err := h.InfrastructureService.List(UserID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, infrastructures)
@@ -53,10 +54,10 @@ func (h *InfrastructureHandler) GetInfrastructure(c *gin.Context) {
 	infrastructure, err := h.InfrastructureService.Get(UserID, uint(idUint))
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Infrastructure not found"})
+			validation.RespondNotFound(c, "Infrastructure not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, infrastructure)
@@ -70,17 +71,18 @@ func (h *InfrastructureHandler) UpdateInfrastructure(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid infrastructure ID"})
 		return
 	}
-	var infrastructure animals.Infrastructure
-	if err := c.ShouldBindJSON(&infrastructure); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var req validation.InfrastructureRequest
+	if err := validation.BindAndValidate(c, &req); err != nil {
+		validation.RespondBindingError(c, err)
 		return
 	}
-	if err := h.InfrastructureService.Update(UserID, uint(idUint), &infrastructure); err != nil {
+	entity := validation.InfrastructureFromRequest(&req)
+	if err := h.InfrastructureService.Update(UserID, uint(idUint), entity); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Infrastructure not found"})
+			validation.RespondNotFound(c, "Infrastructure not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	updated, _ := h.InfrastructureService.Get(UserID, uint(idUint))
@@ -97,10 +99,10 @@ func (h *InfrastructureHandler) DeleteInfrastructure(c *gin.Context) {
 	}
 	if err := h.InfrastructureService.Delete(UserID, uint(idUint)); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Infrastructure not found"})
+			validation.RespondNotFound(c, "Infrastructure not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Infrastructure deleted successfully"})

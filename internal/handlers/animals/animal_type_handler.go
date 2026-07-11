@@ -1,8 +1,8 @@
 package animals
 
 import (
-	animals "farm-backend/internal/models/animals"
 	services "farm-backend/internal/services/animals"
+	"farm-backend/internal/validation"
 	"net/http"
 	"strconv"
 
@@ -20,23 +20,24 @@ func NewAnimalTypeHandler(animalTypeService *services.AnimalTypeService) *Animal
 
 func (h *AnimalTypeHandler) CreateAnimalType(c *gin.Context) {
 	UserID := c.GetUint("user_id")
-	var animalType animals.AnimalType
-	if err := c.ShouldBindJSON(&animalType); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var req validation.AnimalTypeRequest
+	if err := validation.BindAndValidate(c, &req); err != nil {
+		validation.RespondBindingError(c, err)
 		return
 	}
-	if err := h.AnimalTypeService.Create(UserID, &animalType); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	entity := validation.AnimalTypeFromRequest(&req)
+	if err := h.AnimalTypeService.Create(UserID, entity); err != nil {
+		validation.RespondError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, animalType)
+	c.JSON(http.StatusCreated, entity)
 }
 
 func (h *AnimalTypeHandler) ListAnimalTypes(c *gin.Context) {
 	UserID := c.GetUint("user_id")
 	animalTypes, err := h.AnimalTypeService.List(UserID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, animalTypes)
@@ -53,10 +54,10 @@ func (h *AnimalTypeHandler) GetAnimalType(c *gin.Context) {
 	animalType, err := h.AnimalTypeService.Get(UserID, uint(idUint))
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Animal type not found"})
+			validation.RespondNotFound(c, "Animal type not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, animalType)
@@ -70,17 +71,18 @@ func (h *AnimalTypeHandler) UpdateAnimalType(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid animal type ID"})
 		return
 	}
-	var animalType animals.AnimalType
-	if err := c.ShouldBindJSON(&animalType); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var req validation.AnimalTypeRequest
+	if err := validation.BindAndValidate(c, &req); err != nil {
+		validation.RespondBindingError(c, err)
 		return
 	}
-	if err := h.AnimalTypeService.Update(UserID, uint(idUint), &animalType); err != nil {
+	entity := validation.AnimalTypeFromRequest(&req)
+	if err := h.AnimalTypeService.Update(UserID, uint(idUint), entity); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Animal type not found"})
+			validation.RespondNotFound(c, "Animal type not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	updated, _ := h.AnimalTypeService.Get(UserID, uint(idUint))
@@ -97,10 +99,10 @@ func (h *AnimalTypeHandler) DeleteAnimalType(c *gin.Context) {
 	}
 	if err := h.AnimalTypeService.Delete(UserID, uint(idUint)); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Animal type not found"})
+			validation.RespondNotFound(c, "Animal type not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Animal type deleted successfully"})

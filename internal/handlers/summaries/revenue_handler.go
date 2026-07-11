@@ -1,8 +1,10 @@
 package summaries
 
 import (
+	"errors"
 	summaryModels "farm-backend/internal/models/summaries"
 	summaries "farm-backend/internal/services/summaries"
+	"farm-backend/internal/validation"
 	"net/http"
 	"strconv"
 	"time"
@@ -21,16 +23,17 @@ func NewRevenueHandler(svc *summaries.RevenueService) *RevenueHandler {
 
 func (h *RevenueHandler) CreateRevenue(c *gin.Context) {
 	UserID := c.GetUint("user_id")
-	var revenue summaryModels.Revenue
-	if err := c.ShouldBindJSON(&revenue); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var req validation.RevenueRequest
+	if err := validation.BindAndValidate(c, &req); err != nil {
+		validation.RespondBindingError(c, err)
 		return
 	}
-	if err := h.RevenueService.Create(UserID, &revenue); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	entity := validation.RevenueFromRequest(&req)
+	if err := h.RevenueService.Create(UserID, entity); err != nil {
+		validation.RespondError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, revenue)
+	c.JSON(http.StatusCreated, entity)
 }
 
 // ListRevenues supports:
@@ -41,29 +44,33 @@ func (h *RevenueHandler) CreateRevenue(c *gin.Context) {
 func (h *RevenueHandler) ListRevenues(c *gin.Context) {
 	UserID := c.GetUint("user_id")
 
-	source := c.Query("source")
+	source, err := validation.ValidateRevenueSource(c.Query("source"))
+	if err != nil {
+		validation.RespondError(c, err)
+		return
+	}
 	startDateStr := c.Query("start_date")
 	endDateStr := c.Query("end_date")
 
 	var revenues []summaryModels.Revenue
-	var err error
+	var listErr error
 
 	if startDateStr != "" && endDateStr != "" {
 		startDate, err1 := time.Parse("2006-01-02", startDateStr)
 		endDate, err2 := time.Parse("2006-01-02", endDateStr)
 		if err1 != nil || err2 != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format — use YYYY-MM-DD"})
+			validation.RespondBindingError(c, errors.New("invalid date format — use YYYY-MM-DD"))
 			return
 		}
-		revenues, err = h.RevenueService.ListByDateRange(UserID, startDate, endDate)
+		revenues, listErr = h.RevenueService.ListByDateRange(UserID, startDate, endDate)
 	} else if source != "" {
-		revenues, err = h.RevenueService.ListBySource(UserID, source)
+		revenues, listErr = h.RevenueService.ListBySource(UserID, source)
 	} else {
-		revenues, err = h.RevenueService.List(UserID)
+		revenues, listErr = h.RevenueService.List(UserID)
 	}
 
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if listErr != nil {
+		validation.RespondError(c, listErr)
 		return
 	}
 	c.JSON(http.StatusOK, revenues)
@@ -74,16 +81,16 @@ func (h *RevenueHandler) GetRevenue(c *gin.Context) {
 	id := c.Param("id")
 	idUint, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid revenue ID"})
+		validation.RespondBindingError(c, errors.New("invalid revenue ID"))
 		return
 	}
 	revenue, err := h.RevenueService.Get(UserID, uint(idUint))
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Revenue not found"})
+			validation.RespondNotFound(c, "Revenue not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, revenue)
@@ -94,25 +101,26 @@ func (h *RevenueHandler) UpdateRevenue(c *gin.Context) {
 	id := c.Param("id")
 	idUint, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid revenue ID"})
+		validation.RespondBindingError(c, errors.New("invalid revenue ID"))
 		return
 	}
-	var revenue summaryModels.Revenue
-	if err := c.ShouldBindJSON(&revenue); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var req validation.RevenueRequest
+	if err := validation.BindAndValidate(c, &req); err != nil {
+		validation.RespondBindingError(c, err)
 		return
 	}
-	if err := h.RevenueService.Update(UserID, uint(idUint), &revenue); err != nil {
+	entity := validation.RevenueFromRequest(&req)
+	if err := h.RevenueService.Update(UserID, uint(idUint), entity); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Revenue not found"})
+			validation.RespondNotFound(c, "Revenue not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	updated, err := h.RevenueService.Get(UserID, uint(idUint))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "revenue updated but could not be retrieved"})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, updated)
@@ -123,15 +131,15 @@ func (h *RevenueHandler) DeleteRevenue(c *gin.Context) {
 	id := c.Param("id")
 	idUint, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid revenue ID"})
+		validation.RespondBindingError(c, errors.New("invalid revenue ID"))
 		return
 	}
 	if err := h.RevenueService.Delete(UserID, uint(idUint)); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Revenue not found"})
+			validation.RespondNotFound(c, "Revenue not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Revenue deleted successfully"})

@@ -1,8 +1,9 @@
 package summaries
 
 import (
-	summaryModels "farm-backend/internal/models/summaries"
+	"errors"
 	summaries "farm-backend/internal/services/summaries"
+	"farm-backend/internal/validation"
 	"net/http"
 	"strconv"
 
@@ -20,28 +21,37 @@ func NewCostCategoryHandler(svc *summaries.CostCategoryService) *CostCategoryHan
 
 func (h *CostCategoryHandler) CreateCostCategory(c *gin.Context) {
 	UserID := c.GetUint("user_id")
-	var costCategory summaryModels.CostCategory
-	if err := c.ShouldBindJSON(&costCategory); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var req validation.CostCategoryRequest
+	if err := validation.BindAndValidate(c, &req); err != nil {
+		validation.RespondBindingError(c, err)
 		return
 	}
-	if err := h.CostCategoryService.Create(UserID, &costCategory); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	entity := validation.CostCategoryFromRequest(&req)
+	if err := h.CostCategoryService.Create(UserID, entity); err != nil {
+		validation.RespondError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, costCategory)
+	c.JSON(http.StatusCreated, entity)
 }
 
 // ListCostCategories supports ?type=plant|animal&category=input|activity
 // Filtering is pushed to the SQL layer via ListFiltered.
 func (h *CostCategoryHandler) ListCostCategories(c *gin.Context) {
 	UserID := c.GetUint("user_id")
-	typeFilter := c.Query("type")
-	categoryFilter := c.Query("category")
+	typeFilter, err := validation.ValidateCostCategoryType(c.Query("type"))
+	if err != nil {
+		validation.RespondError(c, err)
+		return
+	}
+	categoryFilter, err := validation.ValidateCostCategoryCategory(c.Query("category"))
+	if err != nil {
+		validation.RespondError(c, err)
+		return
+	}
 
 	costCategories, err := h.CostCategoryService.ListFiltered(UserID, typeFilter, categoryFilter)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, costCategories)
@@ -52,16 +62,16 @@ func (h *CostCategoryHandler) GetCostCategory(c *gin.Context) {
 	id := c.Param("id")
 	idUint, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid cost category ID"})
+		validation.RespondBindingError(c, errors.New("invalid cost category ID"))
 		return
 	}
 	costCategory, err := h.CostCategoryService.Get(UserID, uint(idUint))
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Cost category not found"})
+			validation.RespondNotFound(c, "Cost category not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, costCategory)
@@ -72,25 +82,26 @@ func (h *CostCategoryHandler) UpdateCostCategory(c *gin.Context) {
 	id := c.Param("id")
 	idUint, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid cost category ID"})
+		validation.RespondBindingError(c, errors.New("invalid cost category ID"))
 		return
 	}
-	var costCategory summaryModels.CostCategory
-	if err := c.ShouldBindJSON(&costCategory); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var req validation.CostCategoryRequest
+	if err := validation.BindAndValidate(c, &req); err != nil {
+		validation.RespondBindingError(c, err)
 		return
 	}
-	if err := h.CostCategoryService.Update(UserID, uint(idUint), &costCategory); err != nil {
+	entity := validation.CostCategoryFromRequest(&req)
+	if err := h.CostCategoryService.Update(UserID, uint(idUint), entity); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Cost category not found"})
+			validation.RespondNotFound(c, "Cost category not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	updated, err := h.CostCategoryService.Get(UserID, uint(idUint))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "cost category updated but could not be retrieved"})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, updated)
@@ -101,15 +112,15 @@ func (h *CostCategoryHandler) DeleteCostCategory(c *gin.Context) {
 	id := c.Param("id")
 	idUint, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid cost category ID"})
+		validation.RespondBindingError(c, errors.New("invalid cost category ID"))
 		return
 	}
 	if err := h.CostCategoryService.Delete(UserID, uint(idUint)); err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Cost category not found"})
+			validation.RespondNotFound(c, "Cost category not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		validation.RespondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Cost category deleted successfully"})
