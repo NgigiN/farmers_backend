@@ -27,7 +27,8 @@ import (
 )
 
 func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
-	router := gin.Default()
+	router := gin.New()
+	router.Use(gin.Recovery())
 
 	router.Use(middleware.SecurityHeaders())
 	router.Use(middleware.LoggingMiddleware())

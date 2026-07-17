@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -10,23 +10,28 @@ import (
 func LoggingMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-
-		clientIP := c.ClientIP()
 		method := c.Request.Method
 		path := c.Request.URL.Path
+		clientIP := c.ClientIP()
 
 		c.Next()
 
-		duration := time.Since(start)
-		statusCode := c.Writer.Status()
+		status := c.Writer.Status()
+		duration := time.Since(start).Milliseconds()
 
-		log.Printf("[%s] %s %s | Status: %d | Duration: %v | IP: %s",
-			method,
-			path,
-			c.Request.Proto,
-			statusCode,
-			duration,
-			clientIP,
+		level := slog.LevelInfo
+		if status >= 500 {
+			level = slog.LevelError
+		} else if status >= 400 {
+			level = slog.LevelWarn
+		}
+
+		slog.Log(c.Request.Context(), level, "request",
+			"method", method,
+			"path", path,
+			"status", status,
+			"duration_ms", duration,
+			"ip", clientIP,
 		)
 	}
 }

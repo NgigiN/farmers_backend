@@ -5,7 +5,7 @@ import (
 	"farm-backend/internal/config"
 	"farm-backend/internal/db"
 	"farm-backend/internal/routes"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,16 +14,20 @@ import (
 )
 
 func main() {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		slog.Error("failed to load config", "error", err)
+		os.Exit(1)
 	}
 
 	database, err := db.Connect(cfg)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		slog.Error("failed to connect to database", "error", err)
+		os.Exit(1)
 	}
-	log.Println("Connected to database")
+	slog.Info("connected to database")
 
 	router := routes.SetupRoutes(database, cfg)
 
@@ -31,29 +35,29 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-	// set up gin server
 	server := &http.Server{
 		Addr:    ":" + port,
 		Handler: router,
 	}
 
 	go func() {
-		log.Printf("Starting server on port %s", port)
-		log.Printf("Available on http://0.0.0.0:%s/api (all interfaces)", port)
+		slog.Info("server starting", "port", port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Failed to start server: %v", err)
+			slog.Error("server failed", "error", err)
+			os.Exit(1)
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Println("Shutting down server...")
+	slog.Info("shutting down server")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("Failed to shutdown server: %v", err)
+		slog.Error("failed to shutdown server", "error", err)
+		os.Exit(1)
 	}
-	log.Println("Server stopped")
+	slog.Info("server stopped")
 }
